@@ -1,6 +1,0 @@
-specVersion: v1alpha1
-serviceId: starworks
-location: asia-northeast3
-schemaValidation: COMPATIBLE
-connectorDirs:
-  - app

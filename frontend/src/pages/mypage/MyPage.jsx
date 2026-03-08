@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { myPageAPI, STORAGE_KEYS } from '../../services/api';
-import { firebaseAuthService } from '../../services/firebase/auth';
-import { isFirebasePlatformEnabled } from '../../services/firebase/platform';
 
 export default function MyPage() {
     const navigate = useNavigate();
@@ -128,14 +126,10 @@ export default function MyPage() {
         setNotice('');
 
         try {
-            if (isFirebasePlatformEnabled()) {
-                await firebaseAuthService.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-            } else {
-                await myPageAPI.changePassword({
-                    currentPassword: passwordForm.currentPassword,
-                    newPassword: passwordForm.newPassword,
-                });
-            }
+            await myPageAPI.changePassword({
+                currentPassword: passwordForm.currentPassword,
+                newPassword: passwordForm.newPassword,
+            });
             await logout();
             navigate('/login');
         } catch (requestError) {

@@ -6,60 +6,69 @@ import org.junit.jupiter.api.Test;
 
 class ObjectStorageUrlResolverTest {
 
+    private static final String SUPABASE_S3_ENDPOINT = "https://project-ref.storage.supabase.co/storage/v1/s3";
+    private static final String SUPABASE_PUBLIC_BASE_URL = "https://project-ref.supabase.co/storage/v1/object/public/starworks-files";
+
     @Test
-    void buildsPublicBaseUrlForR2CustomDomain() {
+    void buildsPublicBaseUrlForSupabaseStorage() {
         ObjectStorageUrlResolver resolver = new ObjectStorageUrlResolver(
             "starworks-files",
-            "https://1234567890abcdef.r2.cloudflarestorage.com",
-            "https://files.example.com",
+            SUPABASE_S3_ENDPOINT,
+            SUPABASE_PUBLIC_BASE_URL,
             "auto",
             true
         );
 
         assertThat(resolver.buildObjectUrl("approval", "doc.pdf"))
-            .isEqualTo("https://files.example.com/approval/doc.pdf");
+            .isEqualTo("https://project-ref.supabase.co/storage/v1/object/public/starworks-files/approval/doc.pdf");
     }
 
     @Test
-    void extractsKeyFromCustomPublicDomain() {
+    void extractsKeyFromSupabasePublicBaseUrl() {
         ObjectStorageUrlResolver resolver = new ObjectStorageUrlResolver(
             "starworks-files",
-            "https://1234567890abcdef.r2.cloudflarestorage.com",
-            "https://files.example.com",
+            SUPABASE_S3_ENDPOINT,
+            SUPABASE_PUBLIC_BASE_URL,
             "auto",
             true
         );
 
-        assertThat(resolver.extractObjectKey("https://files.example.com/message/abc123.png"))
+        assertThat(
+            resolver.extractObjectKey(
+                "https://project-ref.supabase.co/storage/v1/object/public/starworks-files/message/abc123.png"
+            )
+        )
             .isEqualTo("message/abc123.png");
     }
 
     @Test
-    void buildsPathStyleEndpointUrlWhenConfigured() {
+    void buildsPathStyleEndpointUrlForSupabaseS3() {
         ObjectStorageUrlResolver resolver = new ObjectStorageUrlResolver(
             "starworks-files",
-            "https://1234567890abcdef.r2.cloudflarestorage.com",
+            SUPABASE_S3_ENDPOINT,
             "",
             "auto",
             true
         );
 
         assertThat(resolver.buildObjectUrl("board", "file.txt"))
-            .isEqualTo("https://1234567890abcdef.r2.cloudflarestorage.com/starworks-files/board/file.txt");
+            .isEqualTo("https://project-ref.storage.supabase.co/storage/v1/s3/starworks-files/board/file.txt");
     }
 
     @Test
     void extractsKeyFromPathStyleEndpointUrl() {
         ObjectStorageUrlResolver resolver = new ObjectStorageUrlResolver(
             "starworks-files",
-            "https://1234567890abcdef.r2.cloudflarestorage.com",
+            SUPABASE_S3_ENDPOINT,
             "",
             "auto",
             true
         );
 
         assertThat(
-            resolver.extractObjectKey("https://1234567890abcdef.r2.cloudflarestorage.com/starworks-files/board/file.txt")
+            resolver.extractObjectKey(
+                "https://project-ref.storage.supabase.co/storage/v1/s3/starworks-files/board/file.txt"
+            )
         ).isEqualTo("board/file.txt");
     }
 

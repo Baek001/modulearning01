@@ -1,40 +1,44 @@
-# Cloudflare deployment
+# Cloudflare deployment for `modulearning01-api`
 
-This directory runs the existing React build and Spring Boot backend behind one Cloudflare hostname.
+This directory contains the Cloudflare Worker + Container deployment for the Spring backend.
 
-## What stays the same
-- React still calls relative API paths like `/rest`, `/common`, `/mail`, and `/chat`.
-- Messenger still uses the same-host WebSocket path `/starworks-groupware-websocket`.
-- The backend still uses the same JWT cookie flow and the same PostgreSQL schema.
-
-## What changes
-- The database moves to Supabase Postgres.
-- File storage moves to Cloudflare R2 through the S3-compatible API.
-- The Spring Boot backend runs inside Cloudflare Containers Beta.
-- A Worker serves `frontend/dist` and forwards backend paths to the container.
-
-## Deploy steps
-1. Apply the PostgreSQL SQL files in `db/migration-input/ddl` to Supabase in this order:
-   - `schema_postgres.sql`
-   - `runtime_fixes_postgres.sql`
-   - `constraints_postgres.sql`
-   - `indexes_postgres.sql`
-2. Build the frontend bundle.
-3. Copy `.dev.vars.example` to `.dev.vars` and fill the real values.
-4. Install the worker dependencies.
-5. Sync the values in `.dev.vars` into Cloudflare secrets.
-6. Run `npx wrangler deploy`.
+## Runtime contract
+- Frontend pages project: `modulearning01`
+- Backend worker project: `modulearning01-api`
+- Backend routes forwarded by the worker:
+  - `/rest`
+  - `/common`
+  - `/mail`
+  - `/chat`
+  - `/file`
+  - `/folder`
+  - `/actuator`
+  - `/starworks-groupware-websocket`
 
 ## Required values
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
 - `JWT_SECRET_KEY`
-- `APP_FRONTEND_BASE_URL`, `CORS_ALLOW_ORIGINS`, `COOKIE_DOMAIN`
-- `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_BUCKET`, `AWS_ENDPOINT`
+- `APP_FRONTEND_BASE_URL`
+- `CORS_ALLOW_ORIGINS`
+- `COOKIE_DOMAIN`
+- `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_BUCKET`, `AWS_ENDPOINT`, `AWS_REGION`
+- `AWS_PUBLIC_BASE_URL`
 
-Non-secret defaults such as `FILE_STORAGE_MODE=s3`, `AWS_REGION=auto`, `COOKIE_SAME_SITE=Lax`, and the backend port stay in `wrangler.jsonc`.
+## Recommended storage
+Supabase Storage through the S3-compatible endpoint:
 
-## R2 note
-Set `AWS_PUBLIC_BASE_URL` to a public R2 custom domain if you want image and attachment URLs to stay fast and directly usable in the existing UI.
+- `AWS_ENDPOINT=https://<project-ref>.storage.supabase.co/storage/v1/s3`
+- `AWS_PUBLIC_BASE_URL=https://<project-ref>.supabase.co/storage/v1/object/public/<bucket>`
+- `AWS_REGION=<supabase-project-region>`
 
-## Scaling note
-`wrangler.jsonc` is pinned to a single backend container instance for now. Messenger uses Spring's in-memory STOMP broker, so multi-instance scale would need a separate broker migration first.
+## Deploy
+```powershell
+cd cloudflare
+npm install
+npm run secrets:sync
+npx wrangler deploy
+```
+
+## Notes
+- `wrangler.jsonc` uses `modulearning01-api` as the worker name.
+- The backend container is still single-instance because messenger uses the in-memory STOMP broker.

@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { isFirebasePlatformEnabled, subscribeRoomMessages, subscribeUserRooms } from '../../services/firebase';
 import { communityAPI, messengerAPI } from '../../services/api';
 
 const EMOJI_LIST = ['😀', '😂', '😍', '😎', '😭', '👍', '🙏', '🔥', '🎉', '✅', '💬', '📌'];
@@ -80,7 +79,6 @@ export default function MessengerPage() {
     const { user: authUser } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const firebaseMode = isFirebasePlatformEnabled();
     const popupMode = searchParams.get('popup') === '1';
     const requestedRoomId = searchParams.get('room') || '';
 
@@ -142,6 +140,10 @@ export default function MessengerPage() {
     }, [directRoomUsers, roomDetail?.participants]);
     const selectedCommunity = useMemo(() => communities.find((community) => community.communityId === selectedCommunityId) || null, [communities, selectedCommunityId]);
     const totalUnreadCount = useMemo(() => rooms.reduce((sum, room) => sum + Number(room.unreadCount || 0), 0), [rooms]);
+    const visibleRooms = useMemo(
+        () => rooms.filter((room) => matchesRoomFilters(room, roomScope, roomType, roomKeyword)),
+        [rooms, roomScope, roomType, roomKeyword],
+    );
     const activeParticipantSummary = useMemo(() => {
         const participants = asArray(roomDetail?.participants);
         if (participants.length === 0) return '선택된 대화방 정보가 없습니다.';
@@ -165,23 +167,22 @@ export default function MessengerPage() {
 
     useEffect(() => {
         if (!currentUser?.userId) return;
-        if (!firebaseMode && clientRef.current) return;
+        if (clientRef.current) return;
         connectSocket();
-    }, [currentUser?.userId, firebaseMode, roomScope, roomType, roomKeyword]);
+    }, [currentUser?.userId]);
 
     useEffect(() => {
         activeRoomIdRef.current = activeRoomId;
     }, [activeRoomId]);
 
     useEffect(() => {
-        if (firebaseMode) return;
         loadRooms();
-    }, [firebaseMode, roomScope, roomType]);
+    }, [roomScope, roomType]);
 
     useEffect(() => {
         if (!connected || !activeRoomId) return;
         subscribeRoom(activeRoomId);
-    }, [connected, activeRoomId, firebaseMode]);
+    }, [connected, activeRoomId]);
 
     useEffect(() => {
         if (!showCommunityManager || !selectedCommunityId) {
@@ -302,24 +303,6 @@ export default function MessengerPage() {
     }
 
     function connectSocket() {
-        if (firebaseMode) {
-            setConnected(true);
-            clientRef.current = {
-                connected: true,
-                deactivate: () => {},
-            };
-            updateSubscriptionRef.current?.unsubscribe?.();
-            const unsubscribe = subscribeUserRooms(
-                currentUser.userId,
-                (nextRooms) => {
-                    setRooms(asArray(nextRooms).filter((room) => matchesRoomFilters(room, roomScope, roomType, roomKeyword)));
-                },
-                () => setError('메신저 실시간 연결 중 오류가 발생했습니다.')
-            );
-            updateSubscriptionRef.current = { unsubscribe };
-            return;
-        }
-
         const client = new Client({
             brokerURL: websocketUrl(),
             reconnectDelay: 5000,
@@ -344,20 +327,6 @@ export default function MessengerPage() {
     }
 
     function subscribeRoom(roomId) {
-        if (firebaseMode) {
-            roomSubscriptionRef.current?.unsubscribe?.();
-            const unsubscribe = subscribeRoomMessages(
-                roomId,
-                (nextMessages) => {
-                    setMessages(asArray(nextMessages));
-                    messengerAPI.markAsRead(roomId).catch(() => {});
-                },
-                () => setError('대화방 실시간 동기화에 실패했습니다.')
-            );
-            roomSubscriptionRef.current = { unsubscribe };
-            return;
-        }
-
         if (!clientRef.current?.connected) return;
         roomSubscriptionRef.current?.unsubscribe?.();
         roomSubscriptionRef.current = clientRef.current.subscribe(`/topic/room/${roomId}`, async (frame) => {
@@ -526,14 +495,10 @@ export default function MessengerPage() {
         event.preventDefault();
         if (!messageInput.trim() || !activeRoomId || !connected) return;
         try {
-            if (firebaseMode) {
-                await messengerAPI.send(activeRoomId, messageInput.trim(), { msgTypeCd: 'text' });
-            } else {
-                clientRef.current.publish({
-                    destination: `/app/chat.sendMessage/${activeRoomId}`,
-                    body: JSON.stringify({ contents: messageInput.trim(), msgTypeCd: 'text' }),
-                });
-            }
+            clientRef.current.publish({
+                destination: `/app/chat.sendMessage/${activeRoomId}`,
+                body: JSON.stringify({ contents: messageInput.trim(), msgTypeCd: 'text' }),
+            });
             setMessageInput('');
         } catch (requestError) {
             setError(requestError.response?.data?.message || '메시지 전송에 실패했습니다.');
@@ -839,14 +804,14 @@ export default function MessengerPage() {
                         <div className="messenger-room-list-shell">
                             <div className="messenger-panel-head messenger-room-list-head">
                                 <strong>대화방</strong>
-                                <span className="messenger-count-chip">{rooms.length}</span>
+                                <span className="messenger-count-chip">{visibleRooms.length}</span>
                             </div>
                             <div className="messenger-room-list">
                                 {loading ? (
                                     <div className="approval-empty compact"><strong>대화방을 불러오는 중입니다.</strong></div>
-                                ) : rooms.length === 0 ? (
+                                ) : visibleRooms.length === 0 ? (
                                     <div className="approval-empty compact"><strong>대화방이 없습니다.</strong><span>새 대화 시작 패널에서 바로 방을 만들 수 있습니다.</span></div>
-                                ) : rooms.map((room) => (
+                                ) : visibleRooms.map((room) => (
                                     <button key={room.msgrId} type="button" className={`messenger-room-item ${activeRoomId === room.msgrId ? 'active' : ''}`} onClick={() => openRoom(room.msgrId)}>
                                         <div className="messenger-room-badge">{room.msgrNm?.slice(0, 1) || '?'}</div>
                                         <div className="messenger-room-body">

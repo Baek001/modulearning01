@@ -5,14 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Content -Raw scripts/build.mjs | node --input-type=module\"",
+    "build": "node scripts/build.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@stomp/stompjs": "^7.2.0",
     "axios": "^1.13.6",
-    "firebase": "^12.10.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"

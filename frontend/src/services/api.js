@@ -1,26 +1,36 @@
 import axios from 'axios';
-import {
-    firebaseApprovalBridge,
-    firebaseAlarmBridge,
-    firebaseAttendanceBridge,
-    firebaseBoardBridge,
-    firebaseCalendarBridge,
-    firebaseCommonBridge,
-    firebaseCommunityBridge,
-    firebaseContractBridge,
-    firebaseDashboardBridge,
-    firebaseEmailBridge,
-    firebaseMeetingBridge,
-    firebaseMessengerBridge,
-    firebaseProjectBridge,
-} from './firebase/bridge';
-import { isFirebasePlatformEnabled } from './firebase/platform';
+import { apiBaseUrl } from './runtime';
 
 export const STORAGE_KEYS = {
     user: 'starworks.user',
 };
 
+function createDisabledBridge() {
+    return new Proxy({}, {
+        get() {
+            return () => {
+                throw new Error('Legacy alternate runtime has been removed from this project.');
+            };
+        },
+    });
+}
+
+const legacyApprovalBridge = createDisabledBridge();
+const legacyAlarmBridge = createDisabledBridge();
+const legacyAttendanceBridge = createDisabledBridge();
+const legacyBoardBridge = createDisabledBridge();
+const legacyCalendarBridge = createDisabledBridge();
+const legacyCommonBridge = createDisabledBridge();
+const legacyCommunityBridge = createDisabledBridge();
+const legacyContractBridge = createDisabledBridge();
+const legacyDashboardBridge = createDisabledBridge();
+const legacyEmailBridge = createDisabledBridge();
+const legacyMeetingBridge = createDisabledBridge();
+const legacyMessengerBridge = createDisabledBridge();
+const legacyProjectBridge = createDisabledBridge();
+
 const api = axios.create({
+    baseURL: apiBaseUrl || undefined,
     timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
@@ -28,8 +38,8 @@ const api = axios.create({
     withCredentials: true,
 });
 
-function firebaseBackendEnabled() {
-    return isFirebasePlatformEnabled();
+function legacyBridgeEnabled() {
+    return false;
 }
 
 function clearStoredAuth() {
@@ -126,82 +136,82 @@ export const authAPI = {
 };
 
 export const usersAPI = {
-    list: () => (firebaseBackendEnabled() ? firebaseCommonBridge.listUsers() : api.get('/rest/comm-user')),
-    detail: (userId) => (firebaseBackendEnabled() ? firebaseCommonBridge.getUserDetail(userId) : api.get(`/rest/comm-user/${userId}`)),
-    me: () => (firebaseBackendEnabled() ? firebaseCommonBridge.getMyProfile() : api.get('/rest/comm-user/me')),
-    create: (data) => (firebaseBackendEnabled() ? firebaseCommonBridge.createUser(data) : api.post('/rest/comm-user', data)),
-    modify: (userId, data) => (firebaseBackendEnabled() ? firebaseCommonBridge.updateUser(userId, data) : api.put(`/rest/comm-user/${userId}`, data)),
-    retire: (userId) => (firebaseBackendEnabled() ? firebaseCommonBridge.retireUser(userId) : api.patch(`/rest/comm-user/${userId}/retire`)),
-    search: (term) => (firebaseBackendEnabled() ? firebaseCommonBridge.searchUsers(term) : api.get('/rest/comm-user/search', { params: { term } })),
+    list: () => (legacyBridgeEnabled() ? legacyCommonBridge.listUsers() : api.get('/rest/comm-user')),
+    detail: (userId) => (legacyBridgeEnabled() ? legacyCommonBridge.getUserDetail(userId) : api.get(`/rest/comm-user/${userId}`)),
+    me: () => (legacyBridgeEnabled() ? legacyCommonBridge.getMyProfile() : api.get('/rest/comm-user/me')),
+    create: (data) => (legacyBridgeEnabled() ? legacyCommonBridge.createUser(data) : api.post('/rest/comm-user', data)),
+    modify: (userId, data) => (legacyBridgeEnabled() ? legacyCommonBridge.updateUser(userId, data) : api.put(`/rest/comm-user/${userId}`, data)),
+    retire: (userId) => (legacyBridgeEnabled() ? legacyCommonBridge.retireUser(userId) : api.patch(`/rest/comm-user/${userId}/retire`)),
+    search: (term) => (legacyBridgeEnabled() ? legacyCommonBridge.searchUsers(term) : api.get('/rest/comm-user/search', { params: { term } })),
 };
 
 export const departmentAPI = {
-    list: () => (firebaseBackendEnabled() ? firebaseCommonBridge.listDepartments() : api.get('/rest/comm-depart')),
+    list: () => (legacyBridgeEnabled() ? legacyCommonBridge.listDepartments() : api.get('/rest/comm-depart')),
 };
 
 export const commonCodeAPI = {
-    list: (codeGrpId) => (firebaseBackendEnabled() ? firebaseCommonBridge.listCommonCodes(codeGrpId) : api.get('/rest/comm-code', { params: { codeGrpId } })),
+    list: (codeGrpId) => (legacyBridgeEnabled() ? legacyCommonBridge.listCommonCodes(codeGrpId) : api.get('/rest/comm-code', { params: { codeGrpId } })),
 };
 
 export const dashboardAPI = {
-    summary: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.summary() : api.get('/rest/dashboard')),
-    bootstrap: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.bootstrap() : api.get('/rest/dashboard/bootstrap')),
-    feed: (params = {}) => (firebaseBackendEnabled() ? firebaseDashboardBridge.feed(params) : api.get('/rest/dashboard/feed', { params })),
-    widgets: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.widgets() : api.get('/rest/dashboard/widgets')),
-    preferences: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.preferences() : api.get('/rest/dashboard/preferences')),
-    savePreferences: (data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.savePreferences(data) : api.put('/rest/dashboard/preferences', data)),
-    categories: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.categories() : api.get('/rest/dashboard/categories')),
-    saveCategories: (categories) => (firebaseBackendEnabled() ? firebaseDashboardBridge.saveCategories(categories) : api.put('/rest/dashboard/categories', { categories })),
-    markRead: (pstId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.markRead(pstId) : api.post(`/rest/dashboard/board-read/${pstId}`)),
-    savePost: (pstId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.savePost(pstId) : api.post(`/rest/dashboard/saved-posts/${pstId}`)),
-    unsavePost: (pstId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.unsavePost(pstId) : api.delete(`/rest/dashboard/saved-posts/${pstId}`)),
-    favoriteUsers: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.favoriteUsers() : api.get('/rest/dashboard/favorite-users')),
-    addFavoriteUser: (targetUserId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.addFavoriteUser(targetUserId) : api.post(`/rest/dashboard/favorite-users/${targetUserId}`)),
-    removeFavoriteUser: (targetUserId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.removeFavoriteUser(targetUserId) : api.delete(`/rest/dashboard/favorite-users/${targetUserId}`)),
-    todos: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.todos() : api.get('/rest/dashboard/todos')),
-    createTodo: (data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.createTodo(data) : api.post('/rest/dashboard/todos', data)),
-    updateTodo: (todoId, data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.updateTodo(todoId, data) : api.patch(`/rest/dashboard/todos/${todoId}`, data)),
-    deleteTodo: (todoId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.deleteTodo(todoId) : api.delete(`/rest/dashboard/todos/${todoId}`)),
-    recommendations: (box = 'inbox') => (firebaseBackendEnabled() ? firebaseDashboardBridge.recommendations(box) : api.get('/rest/dashboard/category-recommendations', { params: { box } })),
-    createRecommendations: (targetUserId, categoryCodes, message) => (firebaseBackendEnabled() ? firebaseDashboardBridge.createRecommendations(targetUserId, categoryCodes, message) : api.post('/rest/dashboard/category-recommendations', { targetUserId, categoryCodes, message })),
-    updateRecommendation: (recommendId, data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.updateRecommendation(recommendId, data) : api.patch(`/rest/dashboard/category-recommendations/${recommendId}`, data)),
-    profile: (userId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.profile(userId) : api.get(`/rest/dashboard/profile/${userId}`)),
+    summary: () => (legacyBridgeEnabled() ? legacyDashboardBridge.summary() : api.get('/rest/dashboard')),
+    bootstrap: () => (legacyBridgeEnabled() ? legacyDashboardBridge.bootstrap() : api.get('/rest/dashboard/bootstrap')),
+    feed: (params = {}) => (legacyBridgeEnabled() ? legacyDashboardBridge.feed(params) : api.get('/rest/dashboard/feed', { params })),
+    widgets: () => (legacyBridgeEnabled() ? legacyDashboardBridge.widgets() : api.get('/rest/dashboard/widgets')),
+    preferences: () => (legacyBridgeEnabled() ? legacyDashboardBridge.preferences() : api.get('/rest/dashboard/preferences')),
+    savePreferences: (data) => (legacyBridgeEnabled() ? legacyDashboardBridge.savePreferences(data) : api.put('/rest/dashboard/preferences', data)),
+    categories: () => (legacyBridgeEnabled() ? legacyDashboardBridge.categories() : api.get('/rest/dashboard/categories')),
+    saveCategories: (categories) => (legacyBridgeEnabled() ? legacyDashboardBridge.saveCategories(categories) : api.put('/rest/dashboard/categories', { categories })),
+    markRead: (pstId) => (legacyBridgeEnabled() ? legacyDashboardBridge.markRead(pstId) : api.post(`/rest/dashboard/board-read/${pstId}`)),
+    savePost: (pstId) => (legacyBridgeEnabled() ? legacyDashboardBridge.savePost(pstId) : api.post(`/rest/dashboard/saved-posts/${pstId}`)),
+    unsavePost: (pstId) => (legacyBridgeEnabled() ? legacyDashboardBridge.unsavePost(pstId) : api.delete(`/rest/dashboard/saved-posts/${pstId}`)),
+    favoriteUsers: () => (legacyBridgeEnabled() ? legacyDashboardBridge.favoriteUsers() : api.get('/rest/dashboard/favorite-users')),
+    addFavoriteUser: (targetUserId) => (legacyBridgeEnabled() ? legacyDashboardBridge.addFavoriteUser(targetUserId) : api.post(`/rest/dashboard/favorite-users/${targetUserId}`)),
+    removeFavoriteUser: (targetUserId) => (legacyBridgeEnabled() ? legacyDashboardBridge.removeFavoriteUser(targetUserId) : api.delete(`/rest/dashboard/favorite-users/${targetUserId}`)),
+    todos: () => (legacyBridgeEnabled() ? legacyDashboardBridge.todos() : api.get('/rest/dashboard/todos')),
+    createTodo: (data) => (legacyBridgeEnabled() ? legacyDashboardBridge.createTodo(data) : api.post('/rest/dashboard/todos', data)),
+    updateTodo: (todoId, data) => (legacyBridgeEnabled() ? legacyDashboardBridge.updateTodo(todoId, data) : api.patch(`/rest/dashboard/todos/${todoId}`, data)),
+    deleteTodo: (todoId) => (legacyBridgeEnabled() ? legacyDashboardBridge.deleteTodo(todoId) : api.delete(`/rest/dashboard/todos/${todoId}`)),
+    recommendations: (box = 'inbox') => (legacyBridgeEnabled() ? legacyDashboardBridge.recommendations(box) : api.get('/rest/dashboard/category-recommendations', { params: { box } })),
+    createRecommendations: (targetUserId, categoryCodes, message) => (legacyBridgeEnabled() ? legacyDashboardBridge.createRecommendations(targetUserId, categoryCodes, message) : api.post('/rest/dashboard/category-recommendations', { targetUserId, categoryCodes, message })),
+    updateRecommendation: (recommendId, data) => (legacyBridgeEnabled() ? legacyDashboardBridge.updateRecommendation(recommendId, data) : api.patch(`/rest/dashboard/category-recommendations/${recommendId}`, data)),
+    profile: (userId) => (legacyBridgeEnabled() ? legacyDashboardBridge.profile(userId) : api.get(`/rest/dashboard/profile/${userId}`)),
 };
 
 export const alarmAPI = {
-    list: () => (firebaseBackendEnabled() ? firebaseAlarmBridge.list() : api.get('/rest/alarm-log-list')),
-    top10: () => (firebaseBackendEnabled() ? firebaseAlarmBridge.top10() : api.get('/rest/alarm-log-top10')),
-    detail: (alarmId) => (firebaseBackendEnabled() ? firebaseAlarmBridge.detail(alarmId) : api.get(`/rest/alarm-log/${alarmId}`)),
-    markAllRead: () => (firebaseBackendEnabled() ? firebaseAlarmBridge.markAllRead() : api.put('/rest/alarm-log-list')),
+    list: () => (legacyBridgeEnabled() ? legacyAlarmBridge.list() : api.get('/rest/alarm-log-list')),
+    top10: () => (legacyBridgeEnabled() ? legacyAlarmBridge.top10() : api.get('/rest/alarm-log-top10')),
+    detail: (alarmId) => (legacyBridgeEnabled() ? legacyAlarmBridge.detail(alarmId) : api.get(`/rest/alarm-log/${alarmId}`)),
+    markAllRead: () => (legacyBridgeEnabled() ? legacyAlarmBridge.markAllRead() : api.put('/rest/alarm-log-list')),
 };
 
 export const approvalAPI = {
-    templates: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.templates() : api.get('/rest/approval-template')),
+    templates: () => (legacyBridgeEnabled() ? legacyApprovalBridge.templates() : api.get('/rest/approval-template')),
     templateDetail: (atrzDocTmplId) => api.get(`/rest/approval-template/${atrzDocTmplId}`),
-    summary: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.summary() : api.get('/rest/approval-documents/summary')),
-    list: (params = {}) => (firebaseBackendEnabled() ? firebaseApprovalBridge.list(params) : api.get('/rest/approval-documents', { params })),
-    detail: (atrzDocId) => (firebaseBackendEnabled() ? firebaseApprovalBridge.detail(atrzDocId) : api.get(`/rest/approval-documents/${atrzDocId}`)),
+    summary: () => (legacyBridgeEnabled() ? legacyApprovalBridge.summary() : api.get('/rest/approval-documents/summary')),
+    list: (params = {}) => (legacyBridgeEnabled() ? legacyApprovalBridge.list(params) : api.get('/rest/approval-documents', { params })),
+    detail: (atrzDocId) => (legacyBridgeEnabled() ? legacyApprovalBridge.detail(atrzDocId) : api.get(`/rest/approval-documents/${atrzDocId}`)),
     create: (payload, files = []) => (
-        firebaseBackendEnabled()
-            ? firebaseApprovalBridge.create(payload, files)
+        legacyBridgeEnabled()
+            ? legacyApprovalBridge.create(payload, files)
             : api.post('/rest/approval-documents', toMultipartPayload(payload, files), {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             })
     ),
-    approve: (atrzDocId, data) => (firebaseBackendEnabled() ? firebaseApprovalBridge.approve(atrzDocId, data) : api.post(`/rest/approval-documents/${atrzDocId}/approve`, data)),
-    reject: (atrzDocId, data) => (firebaseBackendEnabled() ? firebaseApprovalBridge.reject(atrzDocId, data) : api.post(`/rest/approval-documents/${atrzDocId}/reject`, data)),
-    retract: (atrzDocId) => (firebaseBackendEnabled() ? firebaseApprovalBridge.retract(atrzDocId) : api.post(`/rest/approval-documents/${atrzDocId}/retract`)),
-    customLines: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.customLines() : api.get('/rest/approval-customline')),
-    createCustomLine: (data) => (firebaseBackendEnabled() ? firebaseApprovalBridge.createCustomLine(data) : api.post('/rest/approval-customline', data)),
-    deleteCustomLine: (name) => (firebaseBackendEnabled() ? firebaseApprovalBridge.deleteCustomLine(name) : api.delete(`/rest/approval-customline/${encodeURIComponent(name)}`)),
-    vacationBalance: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.vacationBalance() : api.get('/rest/approval-vacation/E101')),
-    tempList: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.tempList() : api.get('/rest/approval-temp')),
-    tempDetail: (atrzTempSqn) => (firebaseBackendEnabled() ? firebaseApprovalBridge.tempDetail(atrzTempSqn) : api.get(`/rest/approval-temp/${atrzTempSqn}`)),
+    approve: (atrzDocId, data) => (legacyBridgeEnabled() ? legacyApprovalBridge.approve(atrzDocId, data) : api.post(`/rest/approval-documents/${atrzDocId}/approve`, data)),
+    reject: (atrzDocId, data) => (legacyBridgeEnabled() ? legacyApprovalBridge.reject(atrzDocId, data) : api.post(`/rest/approval-documents/${atrzDocId}/reject`, data)),
+    retract: (atrzDocId) => (legacyBridgeEnabled() ? legacyApprovalBridge.retract(atrzDocId) : api.post(`/rest/approval-documents/${atrzDocId}/retract`)),
+    customLines: () => (legacyBridgeEnabled() ? legacyApprovalBridge.customLines() : api.get('/rest/approval-customline')),
+    createCustomLine: (data) => (legacyBridgeEnabled() ? legacyApprovalBridge.createCustomLine(data) : api.post('/rest/approval-customline', data)),
+    deleteCustomLine: (name) => (legacyBridgeEnabled() ? legacyApprovalBridge.deleteCustomLine(name) : api.delete(`/rest/approval-customline/${encodeURIComponent(name)}`)),
+    vacationBalance: () => (legacyBridgeEnabled() ? legacyApprovalBridge.vacationBalance() : api.get('/rest/approval-vacation/E101')),
+    tempList: () => (legacyBridgeEnabled() ? legacyApprovalBridge.tempList() : api.get('/rest/approval-temp')),
+    tempDetail: (atrzTempSqn) => (legacyBridgeEnabled() ? legacyApprovalBridge.tempDetail(atrzTempSqn) : api.get(`/rest/approval-temp/${atrzTempSqn}`)),
     saveTemp: (payload, files = []) => (
-        firebaseBackendEnabled()
-            ? firebaseApprovalBridge.saveTemp(payload, files)
+        legacyBridgeEnabled()
+            ? legacyApprovalBridge.saveTemp(payload, files)
             : api.post('/rest/approval-temp', toMultipartPayload(payload, files), {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -209,33 +219,33 @@ export const approvalAPI = {
             })
     ),
     updateTemp: (atrzTempSqn, payload, files = []) => (
-        firebaseBackendEnabled()
-            ? firebaseApprovalBridge.updateTemp(atrzTempSqn, payload, files)
+        legacyBridgeEnabled()
+            ? legacyApprovalBridge.updateTemp(atrzTempSqn, payload, files)
             : api.put(`/rest/approval-temp/${atrzTempSqn}`, toMultipartPayload(payload, files), {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             })
     ),
-    deleteTemp: (atrzTempSqn) => (firebaseBackendEnabled() ? firebaseApprovalBridge.deleteTemp(atrzTempSqn) : api.delete(`/rest/approval-temp/${atrzTempSqn}`)),
+    deleteTemp: (atrzTempSqn) => (legacyBridgeEnabled() ? legacyApprovalBridge.deleteTemp(atrzTempSqn) : api.delete(`/rest/approval-temp/${atrzTempSqn}`)),
 };
 
 export const contractAPI = {
-    dashboard: () => (firebaseBackendEnabled() ? firebaseContractBridge.dashboard() : api.get('/rest/contracts/dashboard')),
-    list: (params = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.list(params) : api.get('/rest/contracts', { params })),
-    detail: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.detail(contractId) : api.get(`/rest/contracts/${contractId}`)),
-    create: (payload) => (firebaseBackendEnabled() ? firebaseContractBridge.create(payload) : api.post('/rest/contracts', payload)),
-    send: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.send(contractId) : api.post(`/rest/contracts/${contractId}/send`)),
-    cancel: (contractId, data = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.cancel(contractId, data) : api.post(`/rest/contracts/${contractId}/cancel`, data)),
-    remind: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.remind(contractId) : api.post(`/rest/contracts/${contractId}/remind`)),
-    links: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.links(contractId) : api.get(`/rest/contracts/${contractId}/links`)),
-    createBatch: (payload) => (firebaseBackendEnabled() ? firebaseContractBridge.createBatch(payload) : api.post('/rest/contracts/batches', payload)),
-    batchDetail: (batchId) => (firebaseBackendEnabled() ? firebaseContractBridge.batchDetail(batchId) : api.get(`/rest/contracts/batches/${batchId}`)),
-    templates: () => (firebaseBackendEnabled() ? firebaseContractBridge.templates() : api.get('/rest/contracts/templates')),
-    templateDetail: (templateId) => (firebaseBackendEnabled() ? firebaseContractBridge.templateDetail(templateId) : api.get(`/rest/contracts/templates/${templateId}`)),
+    dashboard: () => (legacyBridgeEnabled() ? legacyContractBridge.dashboard() : api.get('/rest/contracts/dashboard')),
+    list: (params = {}) => (legacyBridgeEnabled() ? legacyContractBridge.list(params) : api.get('/rest/contracts', { params })),
+    detail: (contractId) => (legacyBridgeEnabled() ? legacyContractBridge.detail(contractId) : api.get(`/rest/contracts/${contractId}`)),
+    create: (payload) => (legacyBridgeEnabled() ? legacyContractBridge.create(payload) : api.post('/rest/contracts', payload)),
+    send: (contractId) => (legacyBridgeEnabled() ? legacyContractBridge.send(contractId) : api.post(`/rest/contracts/${contractId}/send`)),
+    cancel: (contractId, data = {}) => (legacyBridgeEnabled() ? legacyContractBridge.cancel(contractId, data) : api.post(`/rest/contracts/${contractId}/cancel`, data)),
+    remind: (contractId) => (legacyBridgeEnabled() ? legacyContractBridge.remind(contractId) : api.post(`/rest/contracts/${contractId}/remind`)),
+    links: (contractId) => (legacyBridgeEnabled() ? legacyContractBridge.links(contractId) : api.get(`/rest/contracts/${contractId}/links`)),
+    createBatch: (payload) => (legacyBridgeEnabled() ? legacyContractBridge.createBatch(payload) : api.post('/rest/contracts/batches', payload)),
+    batchDetail: (batchId) => (legacyBridgeEnabled() ? legacyContractBridge.batchDetail(batchId) : api.get(`/rest/contracts/batches/${batchId}`)),
+    templates: () => (legacyBridgeEnabled() ? legacyContractBridge.templates() : api.get('/rest/contracts/templates')),
+    templateDetail: (templateId) => (legacyBridgeEnabled() ? legacyContractBridge.templateDetail(templateId) : api.get(`/rest/contracts/templates/${templateId}`)),
     createTemplate: (payload, files = {}) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseContractBridge.createTemplate(payload, files);
+        if (legacyBridgeEnabled()) {
+            return legacyContractBridge.createTemplate(payload, files);
         }
         if (files.sourceFile || files.backgroundFile) {
             return api.post('/rest/contracts/templates', toNamedMultipartPayload(payload, files), {
@@ -245,8 +255,8 @@ export const contractAPI = {
         return api.post('/rest/contracts/templates', payload);
     },
     updateTemplate: (templateId, payload, files = {}) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseContractBridge.updateTemplate(templateId, payload, files);
+        if (legacyBridgeEnabled()) {
+            return legacyContractBridge.updateTemplate(templateId, payload, files);
         }
         if (files.sourceFile || files.backgroundFile) {
             return api.put(`/rest/contracts/templates/${templateId}`, toNamedMultipartPayload(payload, files), {
@@ -255,11 +265,11 @@ export const contractAPI = {
         }
         return api.put(`/rest/contracts/templates/${templateId}`, payload);
     },
-    publishTemplate: (templateId, templateVersionId) => (firebaseBackendEnabled() ? firebaseContractBridge.publishTemplate(templateId, templateVersionId) : api.post(`/rest/contracts/templates/${templateId}/publish`, templateVersionId ? { templateVersionId } : {})),
-    templateRequests: () => (firebaseBackendEnabled() ? firebaseContractBridge.templateRequests() : api.get('/rest/contracts/template-requests')),
+    publishTemplate: (templateId, templateVersionId) => (legacyBridgeEnabled() ? legacyContractBridge.publishTemplate(templateId, templateVersionId) : api.post(`/rest/contracts/templates/${templateId}/publish`, templateVersionId ? { templateVersionId } : {})),
+    templateRequests: () => (legacyBridgeEnabled() ? legacyContractBridge.templateRequests() : api.get('/rest/contracts/template-requests')),
     createTemplateRequest: (payload, files = {}) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseContractBridge.createTemplateRequest(payload, files);
+        if (legacyBridgeEnabled()) {
+            return legacyContractBridge.createTemplateRequest(payload, files);
         }
         if (files.sourceFile || files.markedFile || files.sealFile) {
             return api.post('/rest/contracts/template-requests', toNamedMultipartPayload(payload, files), {
@@ -268,12 +278,12 @@ export const contractAPI = {
         }
         return api.post('/rest/contracts/template-requests', payload);
     },
-    approveTemplateRequest: (requestId, data = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.approveTemplateRequest(requestId, data) : api.post(`/rest/contracts/template-requests/${requestId}/approve`, data)),
-    rejectTemplateRequest: (requestId, data = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.rejectTemplateRequest(requestId, data) : api.post(`/rest/contracts/template-requests/${requestId}/reject`, data)),
-    companySettings: () => (firebaseBackendEnabled() ? firebaseContractBridge.companySettings() : api.get('/rest/contracts/company-settings')),
+    approveTemplateRequest: (requestId, data = {}) => (legacyBridgeEnabled() ? legacyContractBridge.approveTemplateRequest(requestId, data) : api.post(`/rest/contracts/template-requests/${requestId}/approve`, data)),
+    rejectTemplateRequest: (requestId, data = {}) => (legacyBridgeEnabled() ? legacyContractBridge.rejectTemplateRequest(requestId, data) : api.post(`/rest/contracts/template-requests/${requestId}/reject`, data)),
+    companySettings: () => (legacyBridgeEnabled() ? legacyContractBridge.companySettings() : api.get('/rest/contracts/company-settings')),
     updateCompanySettings: (payload, files = {}) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseContractBridge.updateCompanySettings(payload, files);
+        if (legacyBridgeEnabled()) {
+            return legacyContractBridge.updateCompanySettings(payload, files);
         }
         if (files.sealFile) {
             return api.put('/rest/contracts/company-settings', toNamedMultipartPayload(payload, files), {
@@ -282,53 +292,53 @@ export const contractAPI = {
         }
         return api.put('/rest/contracts/company-settings', payload);
     },
-    publicDetail: (token) => (firebaseBackendEnabled() ? firebaseContractBridge.publicDetail(token) : api.get(`/rest/contracts/public/${token}`)),
-    publicClaim: (token, payload) => (firebaseBackendEnabled() ? firebaseContractBridge.publicClaim(token, payload) : api.post(`/rest/contracts/public/${token}/claim`, payload)),
-    publicSubmit: (token, payload) => (firebaseBackendEnabled() ? firebaseContractBridge.publicSubmit(token, payload) : api.post(`/rest/contracts/public/${token}/submit`, payload)),
-    publicDownload: (token) => (firebaseBackendEnabled() ? firebaseContractBridge.publicDownload(token) : api.get(`/rest/contracts/public/${token}/download`, { responseType: 'blob' })),
+    publicDetail: (token) => (legacyBridgeEnabled() ? legacyContractBridge.publicDetail(token) : api.get(`/rest/contracts/public/${token}`)),
+    publicClaim: (token, payload) => (legacyBridgeEnabled() ? legacyContractBridge.publicClaim(token, payload) : api.post(`/rest/contracts/public/${token}/claim`, payload)),
+    publicSubmit: (token, payload) => (legacyBridgeEnabled() ? legacyContractBridge.publicSubmit(token, payload) : api.post(`/rest/contracts/public/${token}/submit`, payload)),
+    publicDownload: (token) => (legacyBridgeEnabled() ? legacyContractBridge.publicDownload(token) : api.get(`/rest/contracts/public/${token}/download`, { responseType: 'blob' })),
 };
 
 export const boardAPI = {
-    notices: () => (firebaseBackendEnabled() ? firebaseBoardBridge.notices() : api.get('/rest/board-notice')),
-    community: (bbsCtgrCd) => (firebaseBackendEnabled() ? firebaseBoardBridge.community(bbsCtgrCd) : api.get('/rest/board-community', { params: bbsCtgrCd ? { bbsCtgrCd } : {} })),
-    categoryCounts: () => (firebaseBackendEnabled() ? firebaseBoardBridge.categoryCounts() : api.get('/rest/board-category-counts')),
-    detail: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.detail(pstId) : api.get(`/rest/board/${pstId}`)),
-    create: (data) => (firebaseBackendEnabled() ? firebaseBoardBridge.create(data) : api.post('/rest/board', data)),
-    update: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.update(pstId, data) : api.put(`/rest/board/${pstId}`, data)),
-    remove: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.remove(pstId) : api.delete(`/rest/board/${pstId}`)),
-    incrementView: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.incrementView(pstId) : api.put(`/rest/board-vct/${pstId}`)),
-    comments: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.comments(pstId) : api.get(`/rest/board-comment/${pstId}`)),
-    createComment: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.createComment(pstId, data) : api.post(`/rest/board-comment/${pstId}`, data)),
-    updateComment: (pstId, cmntSqn, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateComment(pstId, cmntSqn, data) : api.put(`/rest/board-comment/${pstId}`, data, { params: { cmntSqn } })),
-    deleteComment: (pstId, cmntSqn) => (firebaseBackendEnabled() ? firebaseBoardBridge.deleteComment(pstId, cmntSqn) : api.delete(`/rest/board-comment/${pstId}`, { params: { cmntSqn } })),
-    workspace: (params = {}) => (firebaseBackendEnabled() ? firebaseBoardBridge.workspace(params) : api.get('/rest/boards', { params })),
-    workspaceDetail: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.workspaceDetail(pstId) : api.get(`/rest/boards/${pstId}`)),
-    createWorkspace: (payload, files = []) => (firebaseBackendEnabled() ? firebaseBoardBridge.createWorkspace(payload, files) : api.post('/rest/boards', toMultipartPayload(payload, files), {
+    notices: () => (legacyBridgeEnabled() ? legacyBoardBridge.notices() : api.get('/rest/board-notice')),
+    community: (bbsCtgrCd) => (legacyBridgeEnabled() ? legacyBoardBridge.community(bbsCtgrCd) : api.get('/rest/board-community', { params: bbsCtgrCd ? { bbsCtgrCd } : {} })),
+    categoryCounts: () => (legacyBridgeEnabled() ? legacyBoardBridge.categoryCounts() : api.get('/rest/board-category-counts')),
+    detail: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.detail(pstId) : api.get(`/rest/board/${pstId}`)),
+    create: (data) => (legacyBridgeEnabled() ? legacyBoardBridge.create(data) : api.post('/rest/board', data)),
+    update: (pstId, data) => (legacyBridgeEnabled() ? legacyBoardBridge.update(pstId, data) : api.put(`/rest/board/${pstId}`, data)),
+    remove: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.remove(pstId) : api.delete(`/rest/board/${pstId}`)),
+    incrementView: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.incrementView(pstId) : api.put(`/rest/board-vct/${pstId}`)),
+    comments: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.comments(pstId) : api.get(`/rest/board-comment/${pstId}`)),
+    createComment: (pstId, data) => (legacyBridgeEnabled() ? legacyBoardBridge.createComment(pstId, data) : api.post(`/rest/board-comment/${pstId}`, data)),
+    updateComment: (pstId, cmntSqn, data) => (legacyBridgeEnabled() ? legacyBoardBridge.updateComment(pstId, cmntSqn, data) : api.put(`/rest/board-comment/${pstId}`, data, { params: { cmntSqn } })),
+    deleteComment: (pstId, cmntSqn) => (legacyBridgeEnabled() ? legacyBoardBridge.deleteComment(pstId, cmntSqn) : api.delete(`/rest/board-comment/${pstId}`, { params: { cmntSqn } })),
+    workspace: (params = {}) => (legacyBridgeEnabled() ? legacyBoardBridge.workspace(params) : api.get('/rest/boards', { params })),
+    workspaceDetail: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.workspaceDetail(pstId) : api.get(`/rest/boards/${pstId}`)),
+    createWorkspace: (payload, files = []) => (legacyBridgeEnabled() ? legacyBoardBridge.createWorkspace(payload, files) : api.post('/rest/boards', toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
     })),
-    updateWorkspace: (pstId, payload, files = []) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateWorkspace(pstId, payload, files) : api.put(`/rest/boards/${pstId}`, toMultipartPayload(payload, files), {
+    updateWorkspace: (pstId, payload, files = []) => (legacyBridgeEnabled() ? legacyBoardBridge.updateWorkspace(pstId, payload, files) : api.put(`/rest/boards/${pstId}`, toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
     })),
-    toggleLikePost: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.toggleLikePost(pstId) : api.post(`/rest/boards/${pstId}/likes`)),
-    likeUsers: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.likeUsers(pstId) : api.get(`/rest/boards/${pstId}/likes`)),
-    readers: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.readers(pstId) : api.get(`/rest/boards/${pstId}/readers`)),
-    share: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.share(pstId, data) : api.post(`/rest/boards/${pstId}/share`, data)),
-    report: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.report(pstId, data) : api.post(`/rest/boards/${pstId}/report`, data)),
-    pin: (pstId, fixedYn) => (firebaseBackendEnabled() ? firebaseBoardBridge.pin(pstId, fixedYn) : api.post(`/rest/boards/${pstId}/pin`, { fixedYn })),
-    votePoll: (pstId, optionIds) => (firebaseBackendEnabled() ? firebaseBoardBridge.votePoll(pstId, optionIds) : api.post(`/rest/boards/${pstId}/poll/vote`, { optionIds })),
-    updateTodoAssignee: (pstId, assigneeUserId, statusCd) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateTodoAssignee(pstId, assigneeUserId, statusCd) : api.patch(`/rest/boards/${pstId}/todo-assignees/${assigneeUserId}`, { statusCd })),
-    scheduleAvailability: (data) => (firebaseBackendEnabled() ? firebaseBoardBridge.scheduleAvailability(data) : api.post('/rest/boards/schedule/availability', data)),
-    createCommentMultipart: (pstId, payload, files = [], upCmntSqn = '') => (firebaseBackendEnabled() ? firebaseBoardBridge.createCommentMultipart(pstId, payload, files, upCmntSqn) : api.post(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
+    toggleLikePost: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.toggleLikePost(pstId) : api.post(`/rest/boards/${pstId}/likes`)),
+    likeUsers: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.likeUsers(pstId) : api.get(`/rest/boards/${pstId}/likes`)),
+    readers: (pstId) => (legacyBridgeEnabled() ? legacyBoardBridge.readers(pstId) : api.get(`/rest/boards/${pstId}/readers`)),
+    share: (pstId, data) => (legacyBridgeEnabled() ? legacyBoardBridge.share(pstId, data) : api.post(`/rest/boards/${pstId}/share`, data)),
+    report: (pstId, data) => (legacyBridgeEnabled() ? legacyBoardBridge.report(pstId, data) : api.post(`/rest/boards/${pstId}/report`, data)),
+    pin: (pstId, fixedYn) => (legacyBridgeEnabled() ? legacyBoardBridge.pin(pstId, fixedYn) : api.post(`/rest/boards/${pstId}/pin`, { fixedYn })),
+    votePoll: (pstId, optionIds) => (legacyBridgeEnabled() ? legacyBoardBridge.votePoll(pstId, optionIds) : api.post(`/rest/boards/${pstId}/poll/vote`, { optionIds })),
+    updateTodoAssignee: (pstId, assigneeUserId, statusCd) => (legacyBridgeEnabled() ? legacyBoardBridge.updateTodoAssignee(pstId, assigneeUserId, statusCd) : api.patch(`/rest/boards/${pstId}/todo-assignees/${assigneeUserId}`, { statusCd })),
+    scheduleAvailability: (data) => (legacyBridgeEnabled() ? legacyBoardBridge.scheduleAvailability(data) : api.post('/rest/boards/schedule/availability', data)),
+    createCommentMultipart: (pstId, payload, files = [], upCmntSqn = '') => (legacyBridgeEnabled() ? legacyBoardBridge.createCommentMultipart(pstId, payload, files, upCmntSqn) : api.post(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
         params: upCmntSqn ? { upCmntSqn } : {},
     })),
-    updateCommentMultipart: (pstId, cmntSqn, payload, files = []) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateCommentMultipart(pstId, cmntSqn, payload, files) : api.put(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
+    updateCommentMultipart: (pstId, cmntSqn, payload, files = []) => (legacyBridgeEnabled() ? legacyBoardBridge.updateCommentMultipart(pstId, cmntSqn, payload, files) : api.put(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
@@ -337,71 +347,71 @@ export const boardAPI = {
 };
 
 export const attendanceAPI = {
-    today: (userId, workYmd = new Date().toISOString().slice(0, 10).replace(/-/g, '')) => (firebaseBackendEnabled() ? firebaseAttendanceBridge.today(userId, workYmd) : api.get(`/rest/attendance/${userId}/${workYmd}`)),
-    history: (userId) => (firebaseBackendEnabled() ? firebaseAttendanceBridge.history(userId) : api.get(`/rest/attendance/${userId}`)),
-    clockIn: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.clockIn() : api.post('/rest/attendance')),
-    clockOut: (workYmd) => (firebaseBackendEnabled() ? firebaseAttendanceBridge.clockOut(workYmd) : api.put('/rest/attendance', { workYmd })),
-    week: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.week() : api.get('/rest/attendance-stats/week')),
-    month: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.month() : api.get('/rest/attendance-stats/month')),
-    monthList: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.monthList() : api.get('/rest/attendance-stats/month-list')),
-    depart: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.depart() : api.get('/rest/attendance-stats/depart')),
+    today: (userId, workYmd = new Date().toISOString().slice(0, 10).replace(/-/g, '')) => (legacyBridgeEnabled() ? legacyAttendanceBridge.today(userId, workYmd) : api.get(`/rest/attendance/${userId}/${workYmd}`)),
+    history: (userId) => (legacyBridgeEnabled() ? legacyAttendanceBridge.history(userId) : api.get(`/rest/attendance/${userId}`)),
+    clockIn: () => (legacyBridgeEnabled() ? legacyAttendanceBridge.clockIn() : api.post('/rest/attendance')),
+    clockOut: (workYmd) => (legacyBridgeEnabled() ? legacyAttendanceBridge.clockOut(workYmd) : api.put('/rest/attendance', { workYmd })),
+    week: () => (legacyBridgeEnabled() ? legacyAttendanceBridge.week() : api.get('/rest/attendance-stats/week')),
+    month: () => (legacyBridgeEnabled() ? legacyAttendanceBridge.month() : api.get('/rest/attendance-stats/month')),
+    monthList: () => (legacyBridgeEnabled() ? legacyAttendanceBridge.monthList() : api.get('/rest/attendance-stats/month-list')),
+    depart: () => (legacyBridgeEnabled() ? legacyAttendanceBridge.depart() : api.get('/rest/attendance-stats/depart')),
 };
 
 export const calendarAPI = {
-    events: (params = {}) => (firebaseBackendEnabled() ? firebaseCalendarBridge.events(params) : api.get('/rest/calendar/events', { params })),
+    events: (params = {}) => (legacyBridgeEnabled() ? legacyCalendarBridge.events(params) : api.get('/rest/calendar/events', { params })),
     user: () => api.get('/rest/calendar-user'),
     userDetail: (userSchdId) => api.get(`/rest/calendar-user/${userSchdId}`),
-    createUser: (data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.createUser(data) : api.post('/rest/calendar-user', data)),
-    updateUser: (userSchdId, data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.updateUser(userSchdId, data) : api.put(`/rest/calendar-user/${userSchdId}`, data)),
-    deleteUser: (userSchdId) => (firebaseBackendEnabled() ? firebaseCalendarBridge.deleteUser(userSchdId) : api.delete(`/rest/calendar-user/${userSchdId}`)),
+    createUser: (data) => (legacyBridgeEnabled() ? legacyCalendarBridge.createUser(data) : api.post('/rest/calendar-user', data)),
+    updateUser: (userSchdId, data) => (legacyBridgeEnabled() ? legacyCalendarBridge.updateUser(userSchdId, data) : api.put(`/rest/calendar-user/${userSchdId}`, data)),
+    deleteUser: (userSchdId) => (legacyBridgeEnabled() ? legacyCalendarBridge.deleteUser(userSchdId) : api.delete(`/rest/calendar-user/${userSchdId}`)),
     dept: () => api.get('/rest/calendar-depart'),
     deptDetail: (deptSchdId) => api.get(`/rest/calendar-depart/${deptSchdId}`),
-    createDept: (data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.createDept(data) : api.post('/rest/calendar-depart', data)),
-    updateDept: (deptSchdId, data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.updateDept(deptSchdId, data) : api.put(`/rest/calendar-depart/${deptSchdId}`, data)),
-    deleteDept: (deptSchdId) => (firebaseBackendEnabled() ? firebaseCalendarBridge.deleteDept(deptSchdId) : api.delete(`/rest/calendar-depart/${deptSchdId}`)),
-    teamProjects: () => (firebaseBackendEnabled() ? firebaseCalendarBridge.teamProjects() : api.get('/rest/fullcalendar-team/project-list')),
+    createDept: (data) => (legacyBridgeEnabled() ? legacyCalendarBridge.createDept(data) : api.post('/rest/calendar-depart', data)),
+    updateDept: (deptSchdId, data) => (legacyBridgeEnabled() ? legacyCalendarBridge.updateDept(deptSchdId, data) : api.put(`/rest/calendar-depart/${deptSchdId}`, data)),
+    deleteDept: (deptSchdId) => (legacyBridgeEnabled() ? legacyCalendarBridge.deleteDept(deptSchdId) : api.delete(`/rest/calendar-depart/${deptSchdId}`)),
+    teamProjects: () => (legacyBridgeEnabled() ? legacyCalendarBridge.teamProjects() : api.get('/rest/fullcalendar-team/project-list')),
 };
 
 export const emailAPI = {
-    counts: () => (firebaseBackendEnabled() ? firebaseEmailBridge.counts() : api.get('/mail/counts')),
-    list: (mailboxTypeCd, page = 1, searchWord = '') => (firebaseBackendEnabled() ? firebaseEmailBridge.list(mailboxTypeCd, page, searchWord) : api.get(`/mail/listData/${mailboxTypeCd}`, {
+    counts: () => (legacyBridgeEnabled() ? legacyEmailBridge.counts() : api.get('/mail/counts')),
+    list: (mailboxTypeCd, page = 1, searchWord = '') => (legacyBridgeEnabled() ? legacyEmailBridge.list(mailboxTypeCd, page, searchWord) : api.get(`/mail/listData/${mailboxTypeCd}`, {
         params: {
             page,
             ...(searchWord ? { searchWord } : {}),
         },
     })),
-    toggleImportance: (emailContId) => (firebaseBackendEnabled() ? firebaseEmailBridge.toggleImportance(emailContId) : api.post(`/mail/toggle-importance/${emailContId}`)),
-    deleteSelected: (emailContIds, mailboxTypeCd) => (firebaseBackendEnabled() ? firebaseEmailBridge.deleteSelected(emailContIds, mailboxTypeCd) : api.post('/mail/deleteSelected', { emailContIds, mailboxTypeCd })),
-    deleteAll: (mailboxTypeCd) => (firebaseBackendEnabled() ? firebaseEmailBridge.deleteAll(mailboxTypeCd) : api.post('/mail/deleteAll', { mailboxTypeCd })),
-    restoreSelected: (emailContIds) => (firebaseBackendEnabled() ? firebaseEmailBridge.restoreSelected(emailContIds) : api.post('/mail/restoreSelected', { emailContIds })),
+    toggleImportance: (emailContId) => (legacyBridgeEnabled() ? legacyEmailBridge.toggleImportance(emailContId) : api.post(`/mail/toggle-importance/${emailContId}`)),
+    deleteSelected: (emailContIds, mailboxTypeCd) => (legacyBridgeEnabled() ? legacyEmailBridge.deleteSelected(emailContIds, mailboxTypeCd) : api.post('/mail/deleteSelected', { emailContIds, mailboxTypeCd })),
+    deleteAll: (mailboxTypeCd) => (legacyBridgeEnabled() ? legacyEmailBridge.deleteAll(mailboxTypeCd) : api.post('/mail/deleteAll', { mailboxTypeCd })),
+    restoreSelected: (emailContIds) => (legacyBridgeEnabled() ? legacyEmailBridge.restoreSelected(emailContIds) : api.post('/mail/restoreSelected', { emailContIds })),
 };
 
 export const messengerAPI = {
-    currentUser: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.currentUser() : api.get('/chat/current-user')),
-    users: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.users() : api.get('/chat/users')),
-    panel: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.panel() : api.get('/chat/panel')),
-    rooms: (params = {}) => (firebaseBackendEnabled() ? firebaseMessengerBridge.rooms(params) : api.get('/chat/rooms', { params })),
-    roomDetail: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.roomDetail(msgrId) : api.get(`/chat/room/${msgrId}`)),
-    messages: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.messages(msgrId) : api.get(`/chat/room/${msgrId}/messages`)),
-    searchMessages: (msgrId, q) => (firebaseBackendEnabled() ? firebaseMessengerBridge.searchMessages(msgrId, q) : api.get(`/chat/room/${msgrId}/search`, { params: { q } })),
-    findOrCreate: (userId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.findOrCreate(userId) : api.get('/chat/room/findOrCreate', { params: { userId } })),
-    selfRoom: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.selfRoom() : api.post('/chat/room/self')),
-    createRoom: (data) => (firebaseBackendEnabled() ? firebaseMessengerBridge.createRoom(data) : api.post('/chat/room/create', data)),
-    send: (msgrId, contents, options = {}) => (firebaseBackendEnabled() ? firebaseMessengerBridge.send(msgrId, contents, options) : Promise.resolve(null)),
-    invite: (msgrId, userIds) => (firebaseBackendEnabled() ? firebaseMessengerBridge.invite(msgrId, userIds) : api.post(`/chat/room/${msgrId}/invite`, { userIds })),
-    kick: (msgrId, userId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.kick(msgrId, userId) : api.post(`/chat/room/${msgrId}/kick`, { userId })),
-    markAsRead: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.markAsRead(msgrId) : api.post(`/chat/room/markAsRead/${msgrId}`)),
-    renameRoom: (msgrId, msgrNm) => (firebaseBackendEnabled() ? firebaseMessengerBridge.renameRoom(msgrId, msgrNm) : api.post(`/chat/room/${msgrId}/name`, { msgrNm })),
-    participants: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.participants(msgrId) : api.get(`/chat/room/${msgrId}/participants`)),
-    notify: (msgrId, notifyEnabled) => (firebaseBackendEnabled() ? firebaseMessengerBridge.notify(msgrId, notifyEnabled) : api.patch(`/chat/room/${msgrId}/notify`, { notifyEnabled })),
-    pin: (msgrId, msgContId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.pin(msgrId, msgContId) : api.patch(`/chat/room/${msgrId}/pin`, { msgContId })),
-    clearPin: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.clearPin(msgrId) : api.patch(`/chat/room/${msgrId}/pin`, {})),
-    leave: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.leave(msgrId) : api.post(`/chat/room/${msgrId}/leave`)),
-    deleteMessage: (msgContId, msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.deleteMessage(msgContId, msgrId) : api.delete(`/chat/message/${msgContId}`, { params: { msgrId } })),
-    forwardMessage: (msgContId, targetRoomId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.forwardMessage(msgContId, targetRoomId) : api.post(`/chat/message/${msgContId}/forward`, { targetRoomId })),
+    currentUser: () => (legacyBridgeEnabled() ? legacyMessengerBridge.currentUser() : api.get('/chat/current-user')),
+    users: () => (legacyBridgeEnabled() ? legacyMessengerBridge.users() : api.get('/chat/users')),
+    panel: () => (legacyBridgeEnabled() ? legacyMessengerBridge.panel() : api.get('/chat/panel')),
+    rooms: (params = {}) => (legacyBridgeEnabled() ? legacyMessengerBridge.rooms(params) : api.get('/chat/rooms', { params })),
+    roomDetail: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.roomDetail(msgrId) : api.get(`/chat/room/${msgrId}`)),
+    messages: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.messages(msgrId) : api.get(`/chat/room/${msgrId}/messages`)),
+    searchMessages: (msgrId, q) => (legacyBridgeEnabled() ? legacyMessengerBridge.searchMessages(msgrId, q) : api.get(`/chat/room/${msgrId}/search`, { params: { q } })),
+    findOrCreate: (userId) => (legacyBridgeEnabled() ? legacyMessengerBridge.findOrCreate(userId) : api.get('/chat/room/findOrCreate', { params: { userId } })),
+    selfRoom: () => (legacyBridgeEnabled() ? legacyMessengerBridge.selfRoom() : api.post('/chat/room/self')),
+    createRoom: (data) => (legacyBridgeEnabled() ? legacyMessengerBridge.createRoom(data) : api.post('/chat/room/create', data)),
+    send: (msgrId, contents, options = {}) => (legacyBridgeEnabled() ? legacyMessengerBridge.send(msgrId, contents, options) : Promise.resolve(null)),
+    invite: (msgrId, userIds) => (legacyBridgeEnabled() ? legacyMessengerBridge.invite(msgrId, userIds) : api.post(`/chat/room/${msgrId}/invite`, { userIds })),
+    kick: (msgrId, userId) => (legacyBridgeEnabled() ? legacyMessengerBridge.kick(msgrId, userId) : api.post(`/chat/room/${msgrId}/kick`, { userId })),
+    markAsRead: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.markAsRead(msgrId) : api.post(`/chat/room/markAsRead/${msgrId}`)),
+    renameRoom: (msgrId, msgrNm) => (legacyBridgeEnabled() ? legacyMessengerBridge.renameRoom(msgrId, msgrNm) : api.post(`/chat/room/${msgrId}/name`, { msgrNm })),
+    participants: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.participants(msgrId) : api.get(`/chat/room/${msgrId}/participants`)),
+    notify: (msgrId, notifyEnabled) => (legacyBridgeEnabled() ? legacyMessengerBridge.notify(msgrId, notifyEnabled) : api.patch(`/chat/room/${msgrId}/notify`, { notifyEnabled })),
+    pin: (msgrId, msgContId) => (legacyBridgeEnabled() ? legacyMessengerBridge.pin(msgrId, msgContId) : api.patch(`/chat/room/${msgrId}/pin`, { msgContId })),
+    clearPin: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.clearPin(msgrId) : api.patch(`/chat/room/${msgrId}/pin`, {})),
+    leave: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.leave(msgrId) : api.post(`/chat/room/${msgrId}/leave`)),
+    deleteMessage: (msgContId, msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.deleteMessage(msgContId, msgrId) : api.delete(`/chat/message/${msgContId}`, { params: { msgrId } })),
+    forwardMessage: (msgContId, targetRoomId) => (legacyBridgeEnabled() ? legacyMessengerBridge.forwardMessage(msgContId, targetRoomId) : api.post(`/chat/message/${msgContId}/forward`, { targetRoomId })),
     uploadFiles: (msgrId, contents, files = []) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseMessengerBridge.uploadFiles(msgrId, contents, files);
+        if (legacyBridgeEnabled()) {
+            return legacyMessengerBridge.uploadFiles(msgrId, contents, files);
         }
         const formData = new FormData();
         if (contents) {
@@ -418,16 +428,16 @@ export const messengerAPI = {
             },
         });
     },
-    exportMessages: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.exportMessages(msgrId) : api.get(`/chat/room/${msgrId}/export.xlsx`, { responseType: 'blob' })),
+    exportMessages: (msgrId) => (legacyBridgeEnabled() ? legacyMessengerBridge.exportMessages(msgrId) : api.get(`/chat/room/${msgrId}/export.xlsx`, { responseType: 'blob' })),
 };
 
 export const communityAPI = {
-    list: (params = {}) => (firebaseBackendEnabled() ? firebaseCommunityBridge.list(params) : api.get('/rest/communities', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
-    search: (params = {}) => (firebaseBackendEnabled() ? firebaseCommunityBridge.search(params) : api.get('/rest/communities/search', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
-    detail: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.detail(communityId) : api.get(`/rest/communities/${communityId}`)),
+    list: (params = {}) => (legacyBridgeEnabled() ? legacyCommunityBridge.list(params) : api.get('/rest/communities', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
+    search: (params = {}) => (legacyBridgeEnabled() ? legacyCommunityBridge.search(params) : api.get('/rest/communities/search', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
+    detail: (communityId) => (legacyBridgeEnabled() ? legacyCommunityBridge.detail(communityId) : api.get(`/rest/communities/${communityId}`)),
     create: (payload, files = {}) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseCommunityBridge.create(payload, files);
+        if (legacyBridgeEnabled()) {
+            return legacyCommunityBridge.create(payload, files);
         }
         if (files.iconFile || files.coverFile) {
             return api.post('/rest/communities', toNamedMultipartPayload(payload, files), {
@@ -439,8 +449,8 @@ export const communityAPI = {
         return api.post('/rest/communities', payload);
     },
     update: (communityId, payload, files = {}) => {
-        if (firebaseBackendEnabled()) {
-            return firebaseCommunityBridge.update(communityId, payload, files);
+        if (legacyBridgeEnabled()) {
+            return legacyCommunityBridge.update(communityId, payload, files);
         }
         if (files.iconFile || files.coverFile) {
             return api.patch(`/rest/communities/${communityId}`, toNamedMultipartPayload(payload, files), {
@@ -451,51 +461,51 @@ export const communityAPI = {
         }
         return api.patch(`/rest/communities/${communityId}`, payload);
     },
-    remove: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.remove(communityId) : api.delete(`/rest/communities/${communityId}`)),
-    close: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.close(communityId) : api.post(`/rest/communities/${communityId}/close`)),
-    join: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.join(communityId) : api.post(`/rest/communities/${communityId}/join`)),
-    leave: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.leave(communityId) : api.post(`/rest/communities/${communityId}/leave`)),
-    members: (communityId, status = '') => (firebaseBackendEnabled() ? firebaseCommunityBridge.members(communityId, status) : api.get(`/rest/communities/${communityId}/members`, { params: status ? { status } : {} })),
-    requests: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.requests(communityId) : api.get(`/rest/communities/${communityId}/requests`)),
-    addMembers: (communityId, userIds) => (firebaseBackendEnabled() ? firebaseCommunityBridge.addMembers(communityId, userIds) : api.post(`/rest/communities/${communityId}/members`, { userIds })),
-    removeMember: (communityId, userId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.removeMember(communityId, userId) : api.delete(`/rest/communities/${communityId}/members/${userId}`)),
-    updateRole: (communityId, userId, roleCd) => (firebaseBackendEnabled() ? firebaseCommunityBridge.updateRole(communityId, userId, roleCd) : api.patch(`/rest/communities/${communityId}/members/${userId}/role`, { roleCd })),
-    approveRequest: (communityId, userId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.approveRequest(communityId, userId) : api.post(`/rest/communities/${communityId}/requests/${userId}/approve`)),
-    rejectRequest: (communityId, userId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.rejectRequest(communityId, userId) : api.post(`/rest/communities/${communityId}/requests/${userId}/reject`)),
-    favorite: (communityId, favoriteYn) => (firebaseBackendEnabled() ? firebaseCommunityBridge.favorite(communityId, favoriteYn) : api.put(`/rest/communities/${communityId}/favorite`, { favoriteYn })),
-    saveOrder: (communityIds) => (firebaseBackendEnabled() ? firebaseCommunityBridge.saveOrder(communityIds) : api.put('/rest/communities/order', { communityIds })),
-    syncOrg: () => (firebaseBackendEnabled() ? firebaseCommunityBridge.syncOrg() : api.post('/rest/communities/sync-org')),
+    remove: (communityId) => (legacyBridgeEnabled() ? legacyCommunityBridge.remove(communityId) : api.delete(`/rest/communities/${communityId}`)),
+    close: (communityId) => (legacyBridgeEnabled() ? legacyCommunityBridge.close(communityId) : api.post(`/rest/communities/${communityId}/close`)),
+    join: (communityId) => (legacyBridgeEnabled() ? legacyCommunityBridge.join(communityId) : api.post(`/rest/communities/${communityId}/join`)),
+    leave: (communityId) => (legacyBridgeEnabled() ? legacyCommunityBridge.leave(communityId) : api.post(`/rest/communities/${communityId}/leave`)),
+    members: (communityId, status = '') => (legacyBridgeEnabled() ? legacyCommunityBridge.members(communityId, status) : api.get(`/rest/communities/${communityId}/members`, { params: status ? { status } : {} })),
+    requests: (communityId) => (legacyBridgeEnabled() ? legacyCommunityBridge.requests(communityId) : api.get(`/rest/communities/${communityId}/requests`)),
+    addMembers: (communityId, userIds) => (legacyBridgeEnabled() ? legacyCommunityBridge.addMembers(communityId, userIds) : api.post(`/rest/communities/${communityId}/members`, { userIds })),
+    removeMember: (communityId, userId) => (legacyBridgeEnabled() ? legacyCommunityBridge.removeMember(communityId, userId) : api.delete(`/rest/communities/${communityId}/members/${userId}`)),
+    updateRole: (communityId, userId, roleCd) => (legacyBridgeEnabled() ? legacyCommunityBridge.updateRole(communityId, userId, roleCd) : api.patch(`/rest/communities/${communityId}/members/${userId}/role`, { roleCd })),
+    approveRequest: (communityId, userId) => (legacyBridgeEnabled() ? legacyCommunityBridge.approveRequest(communityId, userId) : api.post(`/rest/communities/${communityId}/requests/${userId}/approve`)),
+    rejectRequest: (communityId, userId) => (legacyBridgeEnabled() ? legacyCommunityBridge.rejectRequest(communityId, userId) : api.post(`/rest/communities/${communityId}/requests/${userId}/reject`)),
+    favorite: (communityId, favoriteYn) => (legacyBridgeEnabled() ? legacyCommunityBridge.favorite(communityId, favoriteYn) : api.put(`/rest/communities/${communityId}/favorite`, { favoriteYn })),
+    saveOrder: (communityIds) => (legacyBridgeEnabled() ? legacyCommunityBridge.saveOrder(communityIds) : api.put('/rest/communities/order', { communityIds })),
+    syncOrg: () => (legacyBridgeEnabled() ? legacyCommunityBridge.syncOrg() : api.post('/rest/communities/sync-org')),
 };
 
 export const projectAPI = {
-    list: () => (firebaseBackendEnabled() ? firebaseProjectBridge.list() : api.get('/rest/project')),
-    detail: (bizId) => (firebaseBackendEnabled() ? firebaseProjectBridge.detail(bizId) : api.get(`/rest/project/${bizId}`)),
-    create: (data) => (firebaseBackendEnabled() ? firebaseProjectBridge.create(data) : api.post('/rest/project', data)),
-    update: (bizId, data) => (firebaseBackendEnabled() ? firebaseProjectBridge.update(bizId, data) : api.put(`/rest/project/${bizId}`, data)),
-    setStatus: (bizId, bizSttsCd) => (firebaseBackendEnabled() ? firebaseProjectBridge.setStatus(bizId, bizSttsCd) : api.patch(`/rest/project/${bizId}/status`, { bizSttsCd })),
+    list: () => (legacyBridgeEnabled() ? legacyProjectBridge.list() : api.get('/rest/project')),
+    detail: (bizId) => (legacyBridgeEnabled() ? legacyProjectBridge.detail(bizId) : api.get(`/rest/project/${bizId}`)),
+    create: (data) => (legacyBridgeEnabled() ? legacyProjectBridge.create(data) : api.post('/rest/project', data)),
+    update: (bizId, data) => (legacyBridgeEnabled() ? legacyProjectBridge.update(bizId, data) : api.put(`/rest/project/${bizId}`, data)),
+    setStatus: (bizId, bizSttsCd) => (legacyBridgeEnabled() ? legacyProjectBridge.setStatus(bizId, bizSttsCd) : api.patch(`/rest/project/${bizId}/status`, { bizSttsCd })),
     members: (bizId) => api.get(`/rest/project/${bizId}/members`),
-    tasks: (bizId) => (firebaseBackendEnabled() ? firebaseProjectBridge.tasks(bizId) : api.get(`/rest/project/${bizId}/tasks`)),
-    createTask: (bizId, data) => (firebaseBackendEnabled() ? firebaseProjectBridge.createTask(bizId, data) : api.post(`/rest/project/${bizId}/tasks`, data)),
-    updateTask: (taskId, data) => (firebaseBackendEnabled() ? firebaseProjectBridge.updateTask(taskId, data) : api.put(`/rest/project/tasks/${taskId}`, data)),
-    setTaskStatus: (taskId, taskSttsCd) => (firebaseBackendEnabled() ? firebaseProjectBridge.setTaskStatus(taskId, taskSttsCd) : api.patch(`/rest/project/tasks/${taskId}/status`, { taskSttsCd })),
-    deleteTask: (taskId) => (firebaseBackendEnabled() ? firebaseProjectBridge.deleteTask(taskId) : api.delete(`/rest/project/tasks/${taskId}`)),
+    tasks: (bizId) => (legacyBridgeEnabled() ? legacyProjectBridge.tasks(bizId) : api.get(`/rest/project/${bizId}/tasks`)),
+    createTask: (bizId, data) => (legacyBridgeEnabled() ? legacyProjectBridge.createTask(bizId, data) : api.post(`/rest/project/${bizId}/tasks`, data)),
+    updateTask: (taskId, data) => (legacyBridgeEnabled() ? legacyProjectBridge.updateTask(taskId, data) : api.put(`/rest/project/tasks/${taskId}`, data)),
+    setTaskStatus: (taskId, taskSttsCd) => (legacyBridgeEnabled() ? legacyProjectBridge.setTaskStatus(taskId, taskSttsCd) : api.patch(`/rest/project/tasks/${taskId}/status`, { taskSttsCd })),
+    deleteTask: (taskId) => (legacyBridgeEnabled() ? legacyProjectBridge.deleteTask(taskId) : api.delete(`/rest/project/tasks/${taskId}`)),
 };
 
 export const meetingAPI = {
-    rooms: () => (firebaseBackendEnabled() ? firebaseMeetingBridge.rooms() : api.get('/rest/meeting/room')),
-    createRoom: (data) => (firebaseBackendEnabled() ? firebaseMeetingBridge.createRoom(data) : api.post('/rest/meeting/room', data)),
-    reservations: (params) => (firebaseBackendEnabled() ? firebaseMeetingBridge.reservations(params) : api.get('/rest/meeting/reservations', { params })),
-    detail: (reservationId) => (firebaseBackendEnabled() ? firebaseMeetingBridge.detail(reservationId) : api.get(`/rest/meeting/reservations/${reservationId}`)),
-    createReservation: (data) => (firebaseBackendEnabled() ? firebaseMeetingBridge.createReservation(data) : api.post('/rest/meeting', data)),
-    updateReservation: (data) => (firebaseBackendEnabled() ? firebaseMeetingBridge.updateReservation(data) : api.put('/rest/meeting', data)),
-    deleteReservation: (reservationId) => (firebaseBackendEnabled() ? firebaseMeetingBridge.deleteReservation(reservationId) : api.delete(`/rest/meeting/${reservationId}`)),
+    rooms: () => (legacyBridgeEnabled() ? legacyMeetingBridge.rooms() : api.get('/rest/meeting/room')),
+    createRoom: (data) => (legacyBridgeEnabled() ? legacyMeetingBridge.createRoom(data) : api.post('/rest/meeting/room', data)),
+    reservations: (params) => (legacyBridgeEnabled() ? legacyMeetingBridge.reservations(params) : api.get('/rest/meeting/reservations', { params })),
+    detail: (reservationId) => (legacyBridgeEnabled() ? legacyMeetingBridge.detail(reservationId) : api.get(`/rest/meeting/reservations/${reservationId}`)),
+    createReservation: (data) => (legacyBridgeEnabled() ? legacyMeetingBridge.createReservation(data) : api.post('/rest/meeting', data)),
+    updateReservation: (data) => (legacyBridgeEnabled() ? legacyMeetingBridge.updateReservation(data) : api.put('/rest/meeting', data)),
+    deleteReservation: (reservationId) => (legacyBridgeEnabled() ? legacyMeetingBridge.deleteReservation(reservationId) : api.delete(`/rest/meeting/${reservationId}`)),
 };
 
 export const myPageAPI = {
-    profile: () => (firebaseBackendEnabled() ? firebaseCommonBridge.getMyProfile() : api.get('/rest/mypage')),
+    profile: () => (legacyBridgeEnabled() ? legacyCommonBridge.getMyProfile() : api.get('/rest/mypage')),
     updateProfile: (data) => (
-        firebaseBackendEnabled()
-            ? firebaseCommonBridge.updateProfile(data)
+        legacyBridgeEnabled()
+            ? legacyCommonBridge.updateProfile(data)
             : api.put('/rest/mypage/profile', toFormData(data), {
                 headers: {
                     'Content-Type': 'multipart/form-data',
