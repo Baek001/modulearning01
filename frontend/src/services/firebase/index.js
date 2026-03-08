@@ -1,13 +1,18 @@
 export { firebaseAuthService } from './auth';
 export {
     firebaseApprovalBridge,
+    firebaseAlarmBridge,
     firebaseAttendanceBridge,
+    firebaseBoardBridge,
     firebaseBridge,
     firebaseCalendarBridge,
     firebaseCommonBridge,
     firebaseCommunityBridge,
+    firebaseContractBridge,
     firebaseDashboardBridge,
+    firebaseEmailBridge,
     firebaseMeetingBridge,
+    firebaseMessengerBridge,
     firebaseProjectBridge,
 } from './bridge';
 export { getFirebaseApp, getFirebaseAuth, getFirebaseDb, getFirebaseFunctions, getFirebaseStorage } from './client';

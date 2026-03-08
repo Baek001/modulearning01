@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { isFirebasePlatformEnabled } from '../services/firebase';
 import { alarmAPI, messengerAPI } from '../services/api';
 
 function websocketUrl() {
@@ -121,6 +122,7 @@ function ChevronIcon() {
 export default function Topbar() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const firebaseMode = isFirebasePlatformEnabled();
     const clientRef = useRef(null);
     const alarmSubscriptionRef = useRef(null);
     const messageSubscriptionRef = useRef(null);
@@ -174,6 +176,9 @@ export default function Topbar() {
     }, []);
 
     const connectSocket = useCallback(() => {
+        if (firebaseMode) {
+            return;
+        }
         if (!user?.userId || clientRef.current) {
             return;
         }
@@ -205,7 +210,7 @@ export default function Topbar() {
 
         client.activate();
         clientRef.current = client;
-    }, [refreshAlarms, refreshMessengerPanel, user?.userId]);
+    }, [firebaseMode, refreshAlarms, refreshMessengerPanel, user?.userId]);
 
     useEffect(() => {
         if (!user?.userId) {
@@ -216,16 +221,28 @@ export default function Topbar() {
 
         refreshAlarms();
         refreshMessengerPanel();
-        connectSocket();
+        if (!firebaseMode) {
+            connectSocket();
+        }
+
+        const pollingId = firebaseMode
+            ? window.setInterval(() => {
+                refreshAlarms(true);
+                refreshMessengerPanel(true);
+            }, 20000)
+            : null;
 
         return () => {
+            if (pollingId) {
+                window.clearInterval(pollingId);
+            }
             alarmSubscriptionRef.current?.unsubscribe();
             messageSubscriptionRef.current?.unsubscribe();
             messageGlobalSubscriptionRef.current?.unsubscribe();
             clientRef.current?.deactivate();
             clientRef.current = null;
         };
-    }, [connectSocket, refreshAlarms, refreshMessengerPanel, user?.userId]);
+    }, [connectSocket, firebaseMode, refreshAlarms, refreshMessengerPanel, user?.userId]);
 
     useEffect(() => {
         const handlePointerDown = (event) => {

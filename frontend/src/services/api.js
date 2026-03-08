@@ -1,12 +1,17 @@
 import axios from 'axios';
 import {
     firebaseApprovalBridge,
+    firebaseAlarmBridge,
     firebaseAttendanceBridge,
+    firebaseBoardBridge,
     firebaseCalendarBridge,
     firebaseCommonBridge,
     firebaseCommunityBridge,
+    firebaseContractBridge,
     firebaseDashboardBridge,
+    firebaseEmailBridge,
     firebaseMeetingBridge,
+    firebaseMessengerBridge,
     firebaseProjectBridge,
 } from './firebase/bridge';
 import { isFirebasePlatformEnabled } from './firebase/platform';
@@ -139,35 +144,35 @@ export const commonCodeAPI = {
 };
 
 export const dashboardAPI = {
-    summary: () => api.get('/rest/dashboard'),
-    bootstrap: () => api.get('/rest/dashboard/bootstrap'),
-    feed: (params = {}) => api.get('/rest/dashboard/feed', { params }),
-    widgets: () => api.get('/rest/dashboard/widgets'),
-    preferences: () => api.get('/rest/dashboard/preferences'),
-    savePreferences: (data) => api.put('/rest/dashboard/preferences', data),
-    categories: () => api.get('/rest/dashboard/categories'),
-    saveCategories: (categories) => api.put('/rest/dashboard/categories', { categories }),
-    markRead: (pstId) => api.post(`/rest/dashboard/board-read/${pstId}`),
-    savePost: (pstId) => api.post(`/rest/dashboard/saved-posts/${pstId}`),
-    unsavePost: (pstId) => api.delete(`/rest/dashboard/saved-posts/${pstId}`),
+    summary: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.summary() : api.get('/rest/dashboard')),
+    bootstrap: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.bootstrap() : api.get('/rest/dashboard/bootstrap')),
+    feed: (params = {}) => (firebaseBackendEnabled() ? firebaseDashboardBridge.feed(params) : api.get('/rest/dashboard/feed', { params })),
+    widgets: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.widgets() : api.get('/rest/dashboard/widgets')),
+    preferences: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.preferences() : api.get('/rest/dashboard/preferences')),
+    savePreferences: (data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.savePreferences(data) : api.put('/rest/dashboard/preferences', data)),
+    categories: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.categories() : api.get('/rest/dashboard/categories')),
+    saveCategories: (categories) => (firebaseBackendEnabled() ? firebaseDashboardBridge.saveCategories(categories) : api.put('/rest/dashboard/categories', { categories })),
+    markRead: (pstId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.markRead(pstId) : api.post(`/rest/dashboard/board-read/${pstId}`)),
+    savePost: (pstId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.savePost(pstId) : api.post(`/rest/dashboard/saved-posts/${pstId}`)),
+    unsavePost: (pstId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.unsavePost(pstId) : api.delete(`/rest/dashboard/saved-posts/${pstId}`)),
     favoriteUsers: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.favoriteUsers() : api.get('/rest/dashboard/favorite-users')),
     addFavoriteUser: (targetUserId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.addFavoriteUser(targetUserId) : api.post(`/rest/dashboard/favorite-users/${targetUserId}`)),
     removeFavoriteUser: (targetUserId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.removeFavoriteUser(targetUserId) : api.delete(`/rest/dashboard/favorite-users/${targetUserId}`)),
-    todos: () => api.get('/rest/dashboard/todos'),
-    createTodo: (data) => api.post('/rest/dashboard/todos', data),
-    updateTodo: (todoId, data) => api.patch(`/rest/dashboard/todos/${todoId}`, data),
-    deleteTodo: (todoId) => api.delete(`/rest/dashboard/todos/${todoId}`),
-    recommendations: (box = 'inbox') => api.get('/rest/dashboard/category-recommendations', { params: { box } }),
-    createRecommendations: (targetUserId, categoryCodes, message) => api.post('/rest/dashboard/category-recommendations', { targetUserId, categoryCodes, message }),
-    updateRecommendation: (recommendId, data) => api.patch(`/rest/dashboard/category-recommendations/${recommendId}`, data),
-    profile: (userId) => api.get(`/rest/dashboard/profile/${userId}`),
+    todos: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.todos() : api.get('/rest/dashboard/todos')),
+    createTodo: (data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.createTodo(data) : api.post('/rest/dashboard/todos', data)),
+    updateTodo: (todoId, data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.updateTodo(todoId, data) : api.patch(`/rest/dashboard/todos/${todoId}`, data)),
+    deleteTodo: (todoId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.deleteTodo(todoId) : api.delete(`/rest/dashboard/todos/${todoId}`)),
+    recommendations: (box = 'inbox') => (firebaseBackendEnabled() ? firebaseDashboardBridge.recommendations(box) : api.get('/rest/dashboard/category-recommendations', { params: { box } })),
+    createRecommendations: (targetUserId, categoryCodes, message) => (firebaseBackendEnabled() ? firebaseDashboardBridge.createRecommendations(targetUserId, categoryCodes, message) : api.post('/rest/dashboard/category-recommendations', { targetUserId, categoryCodes, message })),
+    updateRecommendation: (recommendId, data) => (firebaseBackendEnabled() ? firebaseDashboardBridge.updateRecommendation(recommendId, data) : api.patch(`/rest/dashboard/category-recommendations/${recommendId}`, data)),
+    profile: (userId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.profile(userId) : api.get(`/rest/dashboard/profile/${userId}`)),
 };
 
 export const alarmAPI = {
-    list: () => api.get('/rest/alarm-log-list'),
-    top10: () => api.get('/rest/alarm-log-top10'),
-    detail: (alarmId) => api.get(`/rest/alarm-log/${alarmId}`),
-    markAllRead: () => api.put('/rest/alarm-log-list'),
+    list: () => (firebaseBackendEnabled() ? firebaseAlarmBridge.list() : api.get('/rest/alarm-log-list')),
+    top10: () => (firebaseBackendEnabled() ? firebaseAlarmBridge.top10() : api.get('/rest/alarm-log-top10')),
+    detail: (alarmId) => (firebaseBackendEnabled() ? firebaseAlarmBridge.detail(alarmId) : api.get(`/rest/alarm-log/${alarmId}`)),
+    markAllRead: () => (firebaseBackendEnabled() ? firebaseAlarmBridge.markAllRead() : api.put('/rest/alarm-log-list')),
 };
 
 export const approvalAPI = {
@@ -216,19 +221,22 @@ export const approvalAPI = {
 };
 
 export const contractAPI = {
-    dashboard: () => api.get('/rest/contracts/dashboard'),
-    list: (params = {}) => api.get('/rest/contracts', { params }),
-    detail: (contractId) => api.get(`/rest/contracts/${contractId}`),
-    create: (payload) => api.post('/rest/contracts', payload),
-    send: (contractId) => api.post(`/rest/contracts/${contractId}/send`),
-    cancel: (contractId, data = {}) => api.post(`/rest/contracts/${contractId}/cancel`, data),
-    remind: (contractId) => api.post(`/rest/contracts/${contractId}/remind`),
-    links: (contractId) => api.get(`/rest/contracts/${contractId}/links`),
-    createBatch: (payload) => api.post('/rest/contracts/batches', payload),
-    batchDetail: (batchId) => api.get(`/rest/contracts/batches/${batchId}`),
-    templates: () => api.get('/rest/contracts/templates'),
-    templateDetail: (templateId) => api.get(`/rest/contracts/templates/${templateId}`),
+    dashboard: () => (firebaseBackendEnabled() ? firebaseContractBridge.dashboard() : api.get('/rest/contracts/dashboard')),
+    list: (params = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.list(params) : api.get('/rest/contracts', { params })),
+    detail: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.detail(contractId) : api.get(`/rest/contracts/${contractId}`)),
+    create: (payload) => (firebaseBackendEnabled() ? firebaseContractBridge.create(payload) : api.post('/rest/contracts', payload)),
+    send: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.send(contractId) : api.post(`/rest/contracts/${contractId}/send`)),
+    cancel: (contractId, data = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.cancel(contractId, data) : api.post(`/rest/contracts/${contractId}/cancel`, data)),
+    remind: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.remind(contractId) : api.post(`/rest/contracts/${contractId}/remind`)),
+    links: (contractId) => (firebaseBackendEnabled() ? firebaseContractBridge.links(contractId) : api.get(`/rest/contracts/${contractId}/links`)),
+    createBatch: (payload) => (firebaseBackendEnabled() ? firebaseContractBridge.createBatch(payload) : api.post('/rest/contracts/batches', payload)),
+    batchDetail: (batchId) => (firebaseBackendEnabled() ? firebaseContractBridge.batchDetail(batchId) : api.get(`/rest/contracts/batches/${batchId}`)),
+    templates: () => (firebaseBackendEnabled() ? firebaseContractBridge.templates() : api.get('/rest/contracts/templates')),
+    templateDetail: (templateId) => (firebaseBackendEnabled() ? firebaseContractBridge.templateDetail(templateId) : api.get(`/rest/contracts/templates/${templateId}`)),
     createTemplate: (payload, files = {}) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseContractBridge.createTemplate(payload, files);
+        }
         if (files.sourceFile || files.backgroundFile) {
             return api.post('/rest/contracts/templates', toNamedMultipartPayload(payload, files), {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -237,6 +245,9 @@ export const contractAPI = {
         return api.post('/rest/contracts/templates', payload);
     },
     updateTemplate: (templateId, payload, files = {}) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseContractBridge.updateTemplate(templateId, payload, files);
+        }
         if (files.sourceFile || files.backgroundFile) {
             return api.put(`/rest/contracts/templates/${templateId}`, toNamedMultipartPayload(payload, files), {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -244,9 +255,12 @@ export const contractAPI = {
         }
         return api.put(`/rest/contracts/templates/${templateId}`, payload);
     },
-    publishTemplate: (templateId, templateVersionId) => api.post(`/rest/contracts/templates/${templateId}/publish`, templateVersionId ? { templateVersionId } : {}),
-    templateRequests: () => api.get('/rest/contracts/template-requests'),
+    publishTemplate: (templateId, templateVersionId) => (firebaseBackendEnabled() ? firebaseContractBridge.publishTemplate(templateId, templateVersionId) : api.post(`/rest/contracts/templates/${templateId}/publish`, templateVersionId ? { templateVersionId } : {})),
+    templateRequests: () => (firebaseBackendEnabled() ? firebaseContractBridge.templateRequests() : api.get('/rest/contracts/template-requests')),
     createTemplateRequest: (payload, files = {}) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseContractBridge.createTemplateRequest(payload, files);
+        }
         if (files.sourceFile || files.markedFile || files.sealFile) {
             return api.post('/rest/contracts/template-requests', toNamedMultipartPayload(payload, files), {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -254,10 +268,13 @@ export const contractAPI = {
         }
         return api.post('/rest/contracts/template-requests', payload);
     },
-    approveTemplateRequest: (requestId, data = {}) => api.post(`/rest/contracts/template-requests/${requestId}/approve`, data),
-    rejectTemplateRequest: (requestId, data = {}) => api.post(`/rest/contracts/template-requests/${requestId}/reject`, data),
-    companySettings: () => api.get('/rest/contracts/company-settings'),
+    approveTemplateRequest: (requestId, data = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.approveTemplateRequest(requestId, data) : api.post(`/rest/contracts/template-requests/${requestId}/approve`, data)),
+    rejectTemplateRequest: (requestId, data = {}) => (firebaseBackendEnabled() ? firebaseContractBridge.rejectTemplateRequest(requestId, data) : api.post(`/rest/contracts/template-requests/${requestId}/reject`, data)),
+    companySettings: () => (firebaseBackendEnabled() ? firebaseContractBridge.companySettings() : api.get('/rest/contracts/company-settings')),
     updateCompanySettings: (payload, files = {}) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseContractBridge.updateCompanySettings(payload, files);
+        }
         if (files.sealFile) {
             return api.put('/rest/contracts/company-settings', toNamedMultipartPayload(payload, files), {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -265,58 +282,58 @@ export const contractAPI = {
         }
         return api.put('/rest/contracts/company-settings', payload);
     },
-    publicDetail: (token) => api.get(`/rest/contracts/public/${token}`),
-    publicClaim: (token, payload) => api.post(`/rest/contracts/public/${token}/claim`, payload),
-    publicSubmit: (token, payload) => api.post(`/rest/contracts/public/${token}/submit`, payload),
-    publicDownload: (token) => api.get(`/rest/contracts/public/${token}/download`, { responseType: 'blob' }),
+    publicDetail: (token) => (firebaseBackendEnabled() ? firebaseContractBridge.publicDetail(token) : api.get(`/rest/contracts/public/${token}`)),
+    publicClaim: (token, payload) => (firebaseBackendEnabled() ? firebaseContractBridge.publicClaim(token, payload) : api.post(`/rest/contracts/public/${token}/claim`, payload)),
+    publicSubmit: (token, payload) => (firebaseBackendEnabled() ? firebaseContractBridge.publicSubmit(token, payload) : api.post(`/rest/contracts/public/${token}/submit`, payload)),
+    publicDownload: (token) => (firebaseBackendEnabled() ? firebaseContractBridge.publicDownload(token) : api.get(`/rest/contracts/public/${token}/download`, { responseType: 'blob' })),
 };
 
 export const boardAPI = {
-    notices: () => api.get('/rest/board-notice'),
-    community: (bbsCtgrCd) => api.get('/rest/board-community', { params: bbsCtgrCd ? { bbsCtgrCd } : {} }),
-    categoryCounts: () => api.get('/rest/board-category-counts'),
-    detail: (pstId) => api.get(`/rest/board/${pstId}`),
-    create: (data) => api.post('/rest/board', data),
-    update: (pstId, data) => api.put(`/rest/board/${pstId}`, data),
-    remove: (pstId) => api.delete(`/rest/board/${pstId}`),
-    incrementView: (pstId) => api.put(`/rest/board-vct/${pstId}`),
-    comments: (pstId) => api.get(`/rest/board-comment/${pstId}`),
-    createComment: (pstId, data) => api.post(`/rest/board-comment/${pstId}`, data),
-    updateComment: (pstId, cmntSqn, data) => api.put(`/rest/board-comment/${pstId}`, data, { params: { cmntSqn } }),
-    deleteComment: (pstId, cmntSqn) => api.delete(`/rest/board-comment/${pstId}`, { params: { cmntSqn } }),
-    workspace: (params = {}) => api.get('/rest/boards', { params }),
-    workspaceDetail: (pstId) => api.get(`/rest/boards/${pstId}`),
-    createWorkspace: (payload, files = []) => api.post('/rest/boards', toMultipartPayload(payload, files), {
+    notices: () => (firebaseBackendEnabled() ? firebaseBoardBridge.notices() : api.get('/rest/board-notice')),
+    community: (bbsCtgrCd) => (firebaseBackendEnabled() ? firebaseBoardBridge.community(bbsCtgrCd) : api.get('/rest/board-community', { params: bbsCtgrCd ? { bbsCtgrCd } : {} })),
+    categoryCounts: () => (firebaseBackendEnabled() ? firebaseBoardBridge.categoryCounts() : api.get('/rest/board-category-counts')),
+    detail: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.detail(pstId) : api.get(`/rest/board/${pstId}`)),
+    create: (data) => (firebaseBackendEnabled() ? firebaseBoardBridge.create(data) : api.post('/rest/board', data)),
+    update: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.update(pstId, data) : api.put(`/rest/board/${pstId}`, data)),
+    remove: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.remove(pstId) : api.delete(`/rest/board/${pstId}`)),
+    incrementView: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.incrementView(pstId) : api.put(`/rest/board-vct/${pstId}`)),
+    comments: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.comments(pstId) : api.get(`/rest/board-comment/${pstId}`)),
+    createComment: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.createComment(pstId, data) : api.post(`/rest/board-comment/${pstId}`, data)),
+    updateComment: (pstId, cmntSqn, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateComment(pstId, cmntSqn, data) : api.put(`/rest/board-comment/${pstId}`, data, { params: { cmntSqn } })),
+    deleteComment: (pstId, cmntSqn) => (firebaseBackendEnabled() ? firebaseBoardBridge.deleteComment(pstId, cmntSqn) : api.delete(`/rest/board-comment/${pstId}`, { params: { cmntSqn } })),
+    workspace: (params = {}) => (firebaseBackendEnabled() ? firebaseBoardBridge.workspace(params) : api.get('/rest/boards', { params })),
+    workspaceDetail: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.workspaceDetail(pstId) : api.get(`/rest/boards/${pstId}`)),
+    createWorkspace: (payload, files = []) => (firebaseBackendEnabled() ? firebaseBoardBridge.createWorkspace(payload, files) : api.post('/rest/boards', toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
-    }),
-    updateWorkspace: (pstId, payload, files = []) => api.put(`/rest/boards/${pstId}`, toMultipartPayload(payload, files), {
+    })),
+    updateWorkspace: (pstId, payload, files = []) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateWorkspace(pstId, payload, files) : api.put(`/rest/boards/${pstId}`, toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
-    }),
-    toggleLikePost: (pstId) => api.post(`/rest/boards/${pstId}/likes`),
-    likeUsers: (pstId) => api.get(`/rest/boards/${pstId}/likes`),
-    readers: (pstId) => api.get(`/rest/boards/${pstId}/readers`),
-    share: (pstId, data) => api.post(`/rest/boards/${pstId}/share`, data),
-    report: (pstId, data) => api.post(`/rest/boards/${pstId}/report`, data),
-    pin: (pstId, fixedYn) => api.post(`/rest/boards/${pstId}/pin`, { fixedYn }),
-    votePoll: (pstId, optionIds) => api.post(`/rest/boards/${pstId}/poll/vote`, { optionIds }),
-    updateTodoAssignee: (pstId, assigneeUserId, statusCd) => api.patch(`/rest/boards/${pstId}/todo-assignees/${assigneeUserId}`, { statusCd }),
-    scheduleAvailability: (data) => api.post('/rest/boards/schedule/availability', data),
-    createCommentMultipart: (pstId, payload, files = [], upCmntSqn = '') => api.post(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
+    })),
+    toggleLikePost: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.toggleLikePost(pstId) : api.post(`/rest/boards/${pstId}/likes`)),
+    likeUsers: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.likeUsers(pstId) : api.get(`/rest/boards/${pstId}/likes`)),
+    readers: (pstId) => (firebaseBackendEnabled() ? firebaseBoardBridge.readers(pstId) : api.get(`/rest/boards/${pstId}/readers`)),
+    share: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.share(pstId, data) : api.post(`/rest/boards/${pstId}/share`, data)),
+    report: (pstId, data) => (firebaseBackendEnabled() ? firebaseBoardBridge.report(pstId, data) : api.post(`/rest/boards/${pstId}/report`, data)),
+    pin: (pstId, fixedYn) => (firebaseBackendEnabled() ? firebaseBoardBridge.pin(pstId, fixedYn) : api.post(`/rest/boards/${pstId}/pin`, { fixedYn })),
+    votePoll: (pstId, optionIds) => (firebaseBackendEnabled() ? firebaseBoardBridge.votePoll(pstId, optionIds) : api.post(`/rest/boards/${pstId}/poll/vote`, { optionIds })),
+    updateTodoAssignee: (pstId, assigneeUserId, statusCd) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateTodoAssignee(pstId, assigneeUserId, statusCd) : api.patch(`/rest/boards/${pstId}/todo-assignees/${assigneeUserId}`, { statusCd })),
+    scheduleAvailability: (data) => (firebaseBackendEnabled() ? firebaseBoardBridge.scheduleAvailability(data) : api.post('/rest/boards/schedule/availability', data)),
+    createCommentMultipart: (pstId, payload, files = [], upCmntSqn = '') => (firebaseBackendEnabled() ? firebaseBoardBridge.createCommentMultipart(pstId, payload, files, upCmntSqn) : api.post(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
         params: upCmntSqn ? { upCmntSqn } : {},
-    }),
-    updateCommentMultipart: (pstId, cmntSqn, payload, files = []) => api.put(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
+    })),
+    updateCommentMultipart: (pstId, cmntSqn, payload, files = []) => (firebaseBackendEnabled() ? firebaseBoardBridge.updateCommentMultipart(pstId, cmntSqn, payload, files) : api.put(`/rest/board-comment/${pstId}`, toMultipartPayload(payload, files), {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
         params: { cmntSqn },
-    }),
+    })),
 };
 
 export const attendanceAPI = {
@@ -346,42 +363,46 @@ export const calendarAPI = {
 };
 
 export const emailAPI = {
-    counts: () => api.get('/mail/counts'),
-    list: (mailboxTypeCd, page = 1, searchWord = '') => api.get(`/mail/listData/${mailboxTypeCd}`, {
+    counts: () => (firebaseBackendEnabled() ? firebaseEmailBridge.counts() : api.get('/mail/counts')),
+    list: (mailboxTypeCd, page = 1, searchWord = '') => (firebaseBackendEnabled() ? firebaseEmailBridge.list(mailboxTypeCd, page, searchWord) : api.get(`/mail/listData/${mailboxTypeCd}`, {
         params: {
             page,
             ...(searchWord ? { searchWord } : {}),
         },
-    }),
-    toggleImportance: (emailContId) => api.post(`/mail/toggle-importance/${emailContId}`),
-    deleteSelected: (emailContIds, mailboxTypeCd) => api.post('/mail/deleteSelected', { emailContIds, mailboxTypeCd }),
-    deleteAll: (mailboxTypeCd) => api.post('/mail/deleteAll', { mailboxTypeCd }),
-    restoreSelected: (emailContIds) => api.post('/mail/restoreSelected', { emailContIds }),
+    })),
+    toggleImportance: (emailContId) => (firebaseBackendEnabled() ? firebaseEmailBridge.toggleImportance(emailContId) : api.post(`/mail/toggle-importance/${emailContId}`)),
+    deleteSelected: (emailContIds, mailboxTypeCd) => (firebaseBackendEnabled() ? firebaseEmailBridge.deleteSelected(emailContIds, mailboxTypeCd) : api.post('/mail/deleteSelected', { emailContIds, mailboxTypeCd })),
+    deleteAll: (mailboxTypeCd) => (firebaseBackendEnabled() ? firebaseEmailBridge.deleteAll(mailboxTypeCd) : api.post('/mail/deleteAll', { mailboxTypeCd })),
+    restoreSelected: (emailContIds) => (firebaseBackendEnabled() ? firebaseEmailBridge.restoreSelected(emailContIds) : api.post('/mail/restoreSelected', { emailContIds })),
 };
 
 export const messengerAPI = {
-    currentUser: () => api.get('/chat/current-user'),
-    users: () => api.get('/chat/users'),
-    panel: () => api.get('/chat/panel'),
-    rooms: (params = {}) => api.get('/chat/rooms', { params }),
-    roomDetail: (msgrId) => api.get(`/chat/room/${msgrId}`),
-    messages: (msgrId) => api.get(`/chat/room/${msgrId}/messages`),
-    searchMessages: (msgrId, q) => api.get(`/chat/room/${msgrId}/search`, { params: { q } }),
-    findOrCreate: (userId) => api.get('/chat/room/findOrCreate', { params: { userId } }),
-    selfRoom: () => api.post('/chat/room/self'),
-    createRoom: (data) => api.post('/chat/room/create', data),
-    invite: (msgrId, userIds) => api.post(`/chat/room/${msgrId}/invite`, { userIds }),
-    kick: (msgrId, userId) => api.post(`/chat/room/${msgrId}/kick`, { userId }),
-    markAsRead: (msgrId) => api.post(`/chat/room/markAsRead/${msgrId}`),
-    renameRoom: (msgrId, msgrNm) => api.post(`/chat/room/${msgrId}/name`, { msgrNm }),
-    participants: (msgrId) => api.get(`/chat/room/${msgrId}/participants`),
-    notify: (msgrId, notifyEnabled) => api.patch(`/chat/room/${msgrId}/notify`, { notifyEnabled }),
-    pin: (msgrId, msgContId) => api.patch(`/chat/room/${msgrId}/pin`, { msgContId }),
-    clearPin: (msgrId) => api.patch(`/chat/room/${msgrId}/pin`, {}),
-    leave: (msgrId) => api.post(`/chat/room/${msgrId}/leave`),
-    deleteMessage: (msgContId, msgrId) => api.delete(`/chat/message/${msgContId}`, { params: { msgrId } }),
-    forwardMessage: (msgContId, targetRoomId) => api.post(`/chat/message/${msgContId}/forward`, { targetRoomId }),
+    currentUser: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.currentUser() : api.get('/chat/current-user')),
+    users: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.users() : api.get('/chat/users')),
+    panel: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.panel() : api.get('/chat/panel')),
+    rooms: (params = {}) => (firebaseBackendEnabled() ? firebaseMessengerBridge.rooms(params) : api.get('/chat/rooms', { params })),
+    roomDetail: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.roomDetail(msgrId) : api.get(`/chat/room/${msgrId}`)),
+    messages: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.messages(msgrId) : api.get(`/chat/room/${msgrId}/messages`)),
+    searchMessages: (msgrId, q) => (firebaseBackendEnabled() ? firebaseMessengerBridge.searchMessages(msgrId, q) : api.get(`/chat/room/${msgrId}/search`, { params: { q } })),
+    findOrCreate: (userId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.findOrCreate(userId) : api.get('/chat/room/findOrCreate', { params: { userId } })),
+    selfRoom: () => (firebaseBackendEnabled() ? firebaseMessengerBridge.selfRoom() : api.post('/chat/room/self')),
+    createRoom: (data) => (firebaseBackendEnabled() ? firebaseMessengerBridge.createRoom(data) : api.post('/chat/room/create', data)),
+    send: (msgrId, contents, options = {}) => (firebaseBackendEnabled() ? firebaseMessengerBridge.send(msgrId, contents, options) : Promise.resolve(null)),
+    invite: (msgrId, userIds) => (firebaseBackendEnabled() ? firebaseMessengerBridge.invite(msgrId, userIds) : api.post(`/chat/room/${msgrId}/invite`, { userIds })),
+    kick: (msgrId, userId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.kick(msgrId, userId) : api.post(`/chat/room/${msgrId}/kick`, { userId })),
+    markAsRead: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.markAsRead(msgrId) : api.post(`/chat/room/markAsRead/${msgrId}`)),
+    renameRoom: (msgrId, msgrNm) => (firebaseBackendEnabled() ? firebaseMessengerBridge.renameRoom(msgrId, msgrNm) : api.post(`/chat/room/${msgrId}/name`, { msgrNm })),
+    participants: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.participants(msgrId) : api.get(`/chat/room/${msgrId}/participants`)),
+    notify: (msgrId, notifyEnabled) => (firebaseBackendEnabled() ? firebaseMessengerBridge.notify(msgrId, notifyEnabled) : api.patch(`/chat/room/${msgrId}/notify`, { notifyEnabled })),
+    pin: (msgrId, msgContId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.pin(msgrId, msgContId) : api.patch(`/chat/room/${msgrId}/pin`, { msgContId })),
+    clearPin: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.clearPin(msgrId) : api.patch(`/chat/room/${msgrId}/pin`, {})),
+    leave: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.leave(msgrId) : api.post(`/chat/room/${msgrId}/leave`)),
+    deleteMessage: (msgContId, msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.deleteMessage(msgContId, msgrId) : api.delete(`/chat/message/${msgContId}`, { params: { msgrId } })),
+    forwardMessage: (msgContId, targetRoomId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.forwardMessage(msgContId, targetRoomId) : api.post(`/chat/message/${msgContId}/forward`, { targetRoomId })),
     uploadFiles: (msgrId, contents, files = []) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseMessengerBridge.uploadFiles(msgrId, contents, files);
+        }
         const formData = new FormData();
         if (contents) {
             formData.append('contents', contents);
@@ -397,14 +418,17 @@ export const messengerAPI = {
             },
         });
     },
-    exportMessages: (msgrId) => api.get(`/chat/room/${msgrId}/export.xlsx`, { responseType: 'blob' }),
+    exportMessages: (msgrId) => (firebaseBackendEnabled() ? firebaseMessengerBridge.exportMessages(msgrId) : api.get(`/chat/room/${msgrId}/export.xlsx`, { responseType: 'blob' })),
 };
 
 export const communityAPI = {
     list: (params = {}) => (firebaseBackendEnabled() ? firebaseCommunityBridge.list(params) : api.get('/rest/communities', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
-    search: (params = {}) => api.get('/rest/communities/search', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params }),
-    detail: (communityId) => api.get(`/rest/communities/${communityId}`),
+    search: (params = {}) => (firebaseBackendEnabled() ? firebaseCommunityBridge.search(params) : api.get('/rest/communities/search', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
+    detail: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.detail(communityId) : api.get(`/rest/communities/${communityId}`)),
     create: (payload, files = {}) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseCommunityBridge.create(payload, files);
+        }
         if (files.iconFile || files.coverFile) {
             return api.post('/rest/communities', toNamedMultipartPayload(payload, files), {
                 headers: {
@@ -415,6 +439,9 @@ export const communityAPI = {
         return api.post('/rest/communities', payload);
     },
     update: (communityId, payload, files = {}) => {
+        if (firebaseBackendEnabled()) {
+            return firebaseCommunityBridge.update(communityId, payload, files);
+        }
         if (files.iconFile || files.coverFile) {
             return api.patch(`/rest/communities/${communityId}`, toNamedMultipartPayload(payload, files), {
                 headers: {
@@ -424,20 +451,20 @@ export const communityAPI = {
         }
         return api.patch(`/rest/communities/${communityId}`, payload);
     },
-    remove: (communityId) => api.delete(`/rest/communities/${communityId}`),
-    close: (communityId) => api.post(`/rest/communities/${communityId}/close`),
-    join: (communityId) => api.post(`/rest/communities/${communityId}/join`),
-    leave: (communityId) => api.post(`/rest/communities/${communityId}/leave`),
-    members: (communityId, status = '') => api.get(`/rest/communities/${communityId}/members`, { params: status ? { status } : {} }),
-    requests: (communityId) => api.get(`/rest/communities/${communityId}/requests`),
-    addMembers: (communityId, userIds) => api.post(`/rest/communities/${communityId}/members`, { userIds }),
-    removeMember: (communityId, userId) => api.delete(`/rest/communities/${communityId}/members/${userId}`),
-    updateRole: (communityId, userId, roleCd) => api.patch(`/rest/communities/${communityId}/members/${userId}/role`, { roleCd }),
-    approveRequest: (communityId, userId) => api.post(`/rest/communities/${communityId}/requests/${userId}/approve`),
-    rejectRequest: (communityId, userId) => api.post(`/rest/communities/${communityId}/requests/${userId}/reject`),
-    favorite: (communityId, favoriteYn) => api.put(`/rest/communities/${communityId}/favorite`, { favoriteYn }),
-    saveOrder: (communityIds) => api.put('/rest/communities/order', { communityIds }),
-    syncOrg: () => api.post('/rest/communities/sync-org'),
+    remove: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.remove(communityId) : api.delete(`/rest/communities/${communityId}`)),
+    close: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.close(communityId) : api.post(`/rest/communities/${communityId}/close`)),
+    join: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.join(communityId) : api.post(`/rest/communities/${communityId}/join`)),
+    leave: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.leave(communityId) : api.post(`/rest/communities/${communityId}/leave`)),
+    members: (communityId, status = '') => (firebaseBackendEnabled() ? firebaseCommunityBridge.members(communityId, status) : api.get(`/rest/communities/${communityId}/members`, { params: status ? { status } : {} })),
+    requests: (communityId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.requests(communityId) : api.get(`/rest/communities/${communityId}/requests`)),
+    addMembers: (communityId, userIds) => (firebaseBackendEnabled() ? firebaseCommunityBridge.addMembers(communityId, userIds) : api.post(`/rest/communities/${communityId}/members`, { userIds })),
+    removeMember: (communityId, userId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.removeMember(communityId, userId) : api.delete(`/rest/communities/${communityId}/members/${userId}`)),
+    updateRole: (communityId, userId, roleCd) => (firebaseBackendEnabled() ? firebaseCommunityBridge.updateRole(communityId, userId, roleCd) : api.patch(`/rest/communities/${communityId}/members/${userId}/role`, { roleCd })),
+    approveRequest: (communityId, userId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.approveRequest(communityId, userId) : api.post(`/rest/communities/${communityId}/requests/${userId}/approve`)),
+    rejectRequest: (communityId, userId) => (firebaseBackendEnabled() ? firebaseCommunityBridge.rejectRequest(communityId, userId) : api.post(`/rest/communities/${communityId}/requests/${userId}/reject`)),
+    favorite: (communityId, favoriteYn) => (firebaseBackendEnabled() ? firebaseCommunityBridge.favorite(communityId, favoriteYn) : api.put(`/rest/communities/${communityId}/favorite`, { favoriteYn })),
+    saveOrder: (communityIds) => (firebaseBackendEnabled() ? firebaseCommunityBridge.saveOrder(communityIds) : api.put('/rest/communities/order', { communityIds })),
+    syncOrg: () => (firebaseBackendEnabled() ? firebaseCommunityBridge.syncOrg() : api.post('/rest/communities/sync-org')),
 };
 
 export const projectAPI = {

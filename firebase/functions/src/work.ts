@@ -374,7 +374,7 @@ function normalizeCommunity(source: JsonMap): CommunityItem {
   };
 }
 
-async function ensureWorkSeedData(): Promise<void> {
+export async function ensureWorkSeedData(): Promise<void> {
   await ensureBaselineData();
   const bootstrapRef = db.doc(WORK_BOOTSTRAP);
   const snapshot = await bootstrapRef.get();
@@ -934,7 +934,7 @@ async function listCalendarEventsRaw(): Promise<CalendarEvent[]> {
   return snapshot.docs.map((doc) => normalizeCalendarEvent(doc.data() as JsonMap));
 }
 
-async function listFavoriteUsersFor(userId: string): Promise<FavoriteUser[]> {
+export async function listFavoriteUsersFor(userId: string): Promise<FavoriteUser[]> {
   await ensureWorkSeedData();
   const snapshot = await db.collection(COLLECTIONS.sessionUsers).doc(userId).collection("favoriteUsers").get();
   return snapshot.docs
@@ -942,7 +942,7 @@ async function listFavoriteUsersFor(userId: string): Promise<FavoriteUser[]> {
     .sort((left, right) => left.userNm.localeCompare(right.userNm, "ko"));
 }
 
-async function listCommunitiesData(): Promise<CommunityItem[]> {
+export async function listCommunitiesData(): Promise<CommunityItem[]> {
   await ensureWorkSeedData();
   const snapshot = await db.collection(COMMUNITIES).get();
   return snapshot.docs.map((doc) => normalizeCommunity(doc.data() as JsonMap));

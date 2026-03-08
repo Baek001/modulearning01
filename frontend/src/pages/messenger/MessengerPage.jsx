@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { isFirebasePlatformEnabled, subscribeRoomMessages, subscribeUserRooms } from '../../services/firebase';
 import { communityAPI, messengerAPI } from '../../services/api';
 
 const EMOJI_LIST = ['😀', '😂', '😍', '😎', '😭', '👍', '🙏', '🔥', '🎉', '✅', '💬', '📌'];
@@ -38,12 +39,33 @@ function roomTypeLabel(type) {
     }
 }
 
+function matchesRoomFilters(room, scope, type, keyword) {
+    if (scope === 'unread' && Number(room?.unreadCount || room?.unreadCnt || 0) <= 0) {
+        return false;
+    }
+    if (type !== 'all' && (room?.roomTypeCd || room?.msgrTypeCd) !== type) {
+        return false;
+    }
+    if (keyword) {
+        const normalized = String(keyword).trim().toLowerCase();
+        const haystack = [room?.msgrNm, room?.lastMsgCont].map((value) => String(value || '').toLowerCase());
+        if (!haystack.some((value) => value.includes(normalized))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function roleLabel(roleCd) {
     return roleCd === 'owner' ? '방장' : '참여자';
 }
 
-function fileDownloadUrl(saveFileNm) {
-    return `/rest/file/download/${encodeURIComponent(saveFileNm)}`;
+function fileDownloadUrl(value) {
+    if (!value) return '#';
+    if (/^https?:/i.test(String(value))) {
+        return String(value);
+    }
+    return `/rest/file/download/${encodeURIComponent(value)}`;
 }
 
 function recentEmojiList() {
@@ -58,6 +80,7 @@ export default function MessengerPage() {
     const { user: authUser } = useAuth();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    const firebaseMode = isFirebasePlatformEnabled();
     const popupMode = searchParams.get('popup') === '1';
     const requestedRoomId = searchParams.get('room') || '';
 
@@ -131,9 +154,9 @@ export default function MessengerPage() {
     useEffect(() => {
         bootstrap();
         return () => {
-            roomSubscriptionRef.current?.unsubscribe();
-            updateSubscriptionRef.current?.unsubscribe();
-            clientRef.current?.deactivate();
+            roomSubscriptionRef.current?.unsubscribe?.();
+            updateSubscriptionRef.current?.unsubscribe?.();
+            clientRef.current?.deactivate?.();
             if (roomsReloadTimerRef.current) {
                 window.clearTimeout(roomsReloadTimerRef.current);
             }
@@ -141,22 +164,24 @@ export default function MessengerPage() {
     }, []);
 
     useEffect(() => {
-        if (!currentUser?.userId || clientRef.current) return;
+        if (!currentUser?.userId) return;
+        if (!firebaseMode && clientRef.current) return;
         connectSocket();
-    }, [currentUser?.userId]);
+    }, [currentUser?.userId, firebaseMode, roomScope, roomType, roomKeyword]);
 
     useEffect(() => {
         activeRoomIdRef.current = activeRoomId;
     }, [activeRoomId]);
 
     useEffect(() => {
+        if (firebaseMode) return;
         loadRooms();
-    }, [roomScope, roomType]);
+    }, [firebaseMode, roomScope, roomType]);
 
     useEffect(() => {
         if (!connected || !activeRoomId) return;
         subscribeRoom(activeRoomId);
-    }, [connected, activeRoomId]);
+    }, [connected, activeRoomId, firebaseMode]);
 
     useEffect(() => {
         if (!showCommunityManager || !selectedCommunityId) {
@@ -277,13 +302,31 @@ export default function MessengerPage() {
     }
 
     function connectSocket() {
+        if (firebaseMode) {
+            setConnected(true);
+            clientRef.current = {
+                connected: true,
+                deactivate: () => {},
+            };
+            updateSubscriptionRef.current?.unsubscribe?.();
+            const unsubscribe = subscribeUserRooms(
+                currentUser.userId,
+                (nextRooms) => {
+                    setRooms(asArray(nextRooms).filter((room) => matchesRoomFilters(room, roomScope, roomType, roomKeyword)));
+                },
+                () => setError('메신저 실시간 연결 중 오류가 발생했습니다.')
+            );
+            updateSubscriptionRef.current = { unsubscribe };
+            return;
+        }
+
         const client = new Client({
             brokerURL: websocketUrl(),
             reconnectDelay: 5000,
             debug: () => {},
             onConnect: () => {
                 setConnected(true);
-                updateSubscriptionRef.current?.unsubscribe();
+                updateSubscriptionRef.current?.unsubscribe?.();
                 updateSubscriptionRef.current = client.subscribe(`/topic/chat/update/${currentUser.userId}`, (frame) => {
                     const payload = JSON.parse(frame.body || '{}');
                     scheduleRoomsReload();
@@ -301,8 +344,22 @@ export default function MessengerPage() {
     }
 
     function subscribeRoom(roomId) {
+        if (firebaseMode) {
+            roomSubscriptionRef.current?.unsubscribe?.();
+            const unsubscribe = subscribeRoomMessages(
+                roomId,
+                (nextMessages) => {
+                    setMessages(asArray(nextMessages));
+                    messengerAPI.markAsRead(roomId).catch(() => {});
+                },
+                () => setError('대화방 실시간 동기화에 실패했습니다.')
+            );
+            roomSubscriptionRef.current = { unsubscribe };
+            return;
+        }
+
         if (!clientRef.current?.connected) return;
-        roomSubscriptionRef.current?.unsubscribe();
+        roomSubscriptionRef.current?.unsubscribe?.();
         roomSubscriptionRef.current = clientRef.current.subscribe(`/topic/room/${roomId}`, async (frame) => {
             const payload = JSON.parse(frame.body);
             if (['DELETE', 'PIN', 'JOIN', 'LEAVE', 'ROOM_UPDATE'].includes(payload.type)) {
@@ -467,12 +524,20 @@ export default function MessengerPage() {
 
     async function handleSendMessage(event) {
         event.preventDefault();
-        if (!messageInput.trim() || !activeRoomId || !clientRef.current?.connected) return;
-        clientRef.current.publish({
-            destination: `/app/chat.sendMessage/${activeRoomId}`,
-            body: JSON.stringify({ contents: messageInput.trim(), msgTypeCd: 'text' }),
-        });
-        setMessageInput('');
+        if (!messageInput.trim() || !activeRoomId || !connected) return;
+        try {
+            if (firebaseMode) {
+                await messengerAPI.send(activeRoomId, messageInput.trim(), { msgTypeCd: 'text' });
+            } else {
+                clientRef.current.publish({
+                    destination: `/app/chat.sendMessage/${activeRoomId}`,
+                    body: JSON.stringify({ contents: messageInput.trim(), msgTypeCd: 'text' }),
+                });
+            }
+            setMessageInput('');
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || '메시지 전송에 실패했습니다.');
+        }
     }
 
     function handleMessageKeyDown(event) {
@@ -890,7 +955,7 @@ export default function MessengerPage() {
                                                         {asArray(message.attachments).length > 0 && (
                                                             <div className="messenger-attachment-list">
                                                                 {message.attachments.map((attachment) => (
-                                                                    <a key={`${message.msgContId}-${attachment.fileSeq}`} href={fileDownloadUrl(attachment.saveFileNm)} className="messenger-attachment-item">
+                                                                    <a key={`${message.msgContId}-${attachment.fileSeq}`} href={fileDownloadUrl(attachment.downloadURL || attachment.filePath || attachment.saveFileNm)} className="messenger-attachment-item">
                                                                         <strong>{attachment.orgnFileNm || attachment.saveFileNm}</strong>
                                                                         <span>{attachment.fileSize ? `${Math.round(attachment.fileSize / 1024)} KB` : '파일'}</span>
                                                                     </a>

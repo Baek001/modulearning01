@@ -19,26 +19,34 @@ function toIsoString(value) {
 }
 
 function normalizeRoomSnapshot(roomId, data = {}) {
+    const roomTypeCd = data.roomType || data.roomTypeCd || data.msgrTypeCd || 'group';
     return {
         msgrId: roomId,
         msgrNm: data.roomNm || data.msgrNm || '',
-        msgrTypeCd: data.roomType || data.msgrTypeCd || 'group',
+        roomTypeCd,
+        msgrTypeCd: roomTypeCd,
+        unreadCount: Number(data.unreadCount || data.unreadCnt || 0),
         unreadCnt: Number(data.unreadCount || data.unreadCnt || 0),
         notifyEnabled: data.notifyEnabled !== false,
         lastMsgCont: data.lastMessage || data.lastMsgCont || '',
-        lastMsgAt: toIsoString(data.lastMessageAt || data.lastMsgAt),
+        lastMsgDt: toIsoString(data.lastMessageAt || data.lastMsgDt || data.lastMsgAt),
+        crtDt: toIsoString(data.createdAt || data.crtDt || data.lastMessageAt || data.lastMsgAt),
     };
 }
 
 function normalizeMessageSnapshot(messageId, data = {}) {
     return {
         msgContId: messageId,
-        senderId: data.senderId || '',
-        senderNm: data.senderName || data.senderNm || '',
-        msgCont: data.messageText || data.msgCont || '',
+        userId: data.senderId || data.userId || '',
+        userNm: data.senderName || data.userNm || data.senderNm || '',
+        deptNm: data.deptNm || '',
+        jbgdNm: data.jbgdNm || '',
+        contents: data.messageText || data.contents || data.msgCont || '',
         msgTypeCd: data.msgType || data.msgTypeCd || 'text',
-        files: Array.isArray(data.attachments) ? data.attachments : [],
-        createdDt: toIsoString(data.createdAt || data.createdDt),
+        attachments: Array.isArray(data.attachments) ? data.attachments : [],
+        sendDt: toIsoString(data.createdAt || data.sendDt || data.createdDt),
+        unreadCount: Number(data.unreadCount || 0),
+        forwardPreview: data.forwardPreview || '',
     };
 }
 
