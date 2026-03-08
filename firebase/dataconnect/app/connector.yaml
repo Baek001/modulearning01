@@ -1,0 +1,11 @@
+connectorId: app
+generate:
+  javascriptSdk:
+    - outputDir: ../../../frontend/src/generated/dataconnect/app
+      package: "@starworks/dataconnect-app-web"
+      packageJsonDir: ../../../frontend
+      react: true
+  adminNodeSdk:
+    - outputDir: ../../functions/src/generated/dataconnect/app
+      package: "@starworks/dataconnect-app-admin"
+      packageJsonDir: ../../functions

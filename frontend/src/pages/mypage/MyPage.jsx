@@ -1,7 +1,9 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { myPageAPI, STORAGE_KEYS } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { myPageAPI, STORAGE_KEYS } from '../../services/api';
+import { firebaseAuthService } from '../../services/firebase/auth';
+import { isFirebasePlatformEnabled } from '../../services/firebase/platform';
 
 export default function MyPage() {
     const navigate = useNavigate();
@@ -94,6 +96,8 @@ export default function MyPage() {
                         userEmail: nextProfile?.userEmail || parsed.userEmail,
                         userTelno: nextProfile?.userTelno || parsed.userTelno,
                         extTel: nextProfile?.extTel || parsed.extTel,
+                        profileImageUrl: nextProfile?.profileImageUrl || parsed.profileImageUrl,
+                        profileImagePath: nextProfile?.profileImagePath || parsed.profileImagePath,
                     }));
                 } catch {
                     // Ignore malformed local storage.
@@ -124,14 +128,18 @@ export default function MyPage() {
         setNotice('');
 
         try {
-            await myPageAPI.changePassword({
-                currentPassword: passwordForm.currentPassword,
-                newPassword: passwordForm.newPassword,
-            });
+            if (isFirebasePlatformEnabled()) {
+                await firebaseAuthService.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+            } else {
+                await myPageAPI.changePassword({
+                    currentPassword: passwordForm.currentPassword,
+                    newPassword: passwordForm.newPassword,
+                });
+            }
             await logout();
             navigate('/login');
         } catch (requestError) {
-            setError(requestError.response?.data?.message || '비밀번호 변경에 실패했습니다.');
+            setError(requestError.response?.data?.message || requestError.message || '비밀번호 변경에 실패했습니다.');
         } finally {
             setSavingPassword(false);
         }

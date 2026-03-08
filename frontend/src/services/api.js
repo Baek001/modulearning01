@@ -1,4 +1,15 @@
-﻿import axios from 'axios';
+import axios from 'axios';
+import {
+    firebaseApprovalBridge,
+    firebaseAttendanceBridge,
+    firebaseCalendarBridge,
+    firebaseCommonBridge,
+    firebaseCommunityBridge,
+    firebaseDashboardBridge,
+    firebaseMeetingBridge,
+    firebaseProjectBridge,
+} from './firebase/bridge';
+import { isFirebasePlatformEnabled } from './firebase/platform';
 
 export const STORAGE_KEYS = {
     user: 'starworks.user',
@@ -11,6 +22,10 @@ const api = axios.create({
     },
     withCredentials: true,
 });
+
+function firebaseBackendEnabled() {
+    return isFirebasePlatformEnabled();
+}
 
 function clearStoredAuth() {
     localStorage.removeItem(STORAGE_KEYS.user);
@@ -106,21 +121,21 @@ export const authAPI = {
 };
 
 export const usersAPI = {
-    list: () => api.get('/rest/comm-user'),
-    detail: (userId) => api.get(`/rest/comm-user/${userId}`),
-    me: () => api.get('/rest/comm-user/me'),
-    create: (data) => api.post('/rest/comm-user', data),
-    modify: (userId, data) => api.put(`/rest/comm-user/${userId}`, data),
-    retire: (userId) => api.patch(`/rest/comm-user/${userId}/retire`),
-    search: (term) => api.get('/rest/comm-user/search', { params: { term } }),
+    list: () => (firebaseBackendEnabled() ? firebaseCommonBridge.listUsers() : api.get('/rest/comm-user')),
+    detail: (userId) => (firebaseBackendEnabled() ? firebaseCommonBridge.getUserDetail(userId) : api.get(`/rest/comm-user/${userId}`)),
+    me: () => (firebaseBackendEnabled() ? firebaseCommonBridge.getMyProfile() : api.get('/rest/comm-user/me')),
+    create: (data) => (firebaseBackendEnabled() ? firebaseCommonBridge.createUser(data) : api.post('/rest/comm-user', data)),
+    modify: (userId, data) => (firebaseBackendEnabled() ? firebaseCommonBridge.updateUser(userId, data) : api.put(`/rest/comm-user/${userId}`, data)),
+    retire: (userId) => (firebaseBackendEnabled() ? firebaseCommonBridge.retireUser(userId) : api.patch(`/rest/comm-user/${userId}/retire`)),
+    search: (term) => (firebaseBackendEnabled() ? firebaseCommonBridge.searchUsers(term) : api.get('/rest/comm-user/search', { params: { term } })),
 };
 
 export const departmentAPI = {
-    list: () => api.get('/rest/comm-depart'),
+    list: () => (firebaseBackendEnabled() ? firebaseCommonBridge.listDepartments() : api.get('/rest/comm-depart')),
 };
 
 export const commonCodeAPI = {
-    list: (codeGrpId) => api.get('/rest/comm-code', { params: { codeGrpId } }),
+    list: (codeGrpId) => (firebaseBackendEnabled() ? firebaseCommonBridge.listCommonCodes(codeGrpId) : api.get('/rest/comm-code', { params: { codeGrpId } })),
 };
 
 export const dashboardAPI = {
@@ -135,9 +150,9 @@ export const dashboardAPI = {
     markRead: (pstId) => api.post(`/rest/dashboard/board-read/${pstId}`),
     savePost: (pstId) => api.post(`/rest/dashboard/saved-posts/${pstId}`),
     unsavePost: (pstId) => api.delete(`/rest/dashboard/saved-posts/${pstId}`),
-    favoriteUsers: () => api.get('/rest/dashboard/favorite-users'),
-    addFavoriteUser: (targetUserId) => api.post(`/rest/dashboard/favorite-users/${targetUserId}`),
-    removeFavoriteUser: (targetUserId) => api.delete(`/rest/dashboard/favorite-users/${targetUserId}`),
+    favoriteUsers: () => (firebaseBackendEnabled() ? firebaseDashboardBridge.favoriteUsers() : api.get('/rest/dashboard/favorite-users')),
+    addFavoriteUser: (targetUserId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.addFavoriteUser(targetUserId) : api.post(`/rest/dashboard/favorite-users/${targetUserId}`)),
+    removeFavoriteUser: (targetUserId) => (firebaseBackendEnabled() ? firebaseDashboardBridge.removeFavoriteUser(targetUserId) : api.delete(`/rest/dashboard/favorite-users/${targetUserId}`)),
     todos: () => api.get('/rest/dashboard/todos'),
     createTodo: (data) => api.post('/rest/dashboard/todos', data),
     updateTodo: (todoId, data) => api.patch(`/rest/dashboard/todos/${todoId}`, data),
@@ -156,36 +171,48 @@ export const alarmAPI = {
 };
 
 export const approvalAPI = {
-    templates: () => api.get('/rest/approval-template'),
+    templates: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.templates() : api.get('/rest/approval-template')),
     templateDetail: (atrzDocTmplId) => api.get(`/rest/approval-template/${atrzDocTmplId}`),
-    summary: () => api.get('/rest/approval-documents/summary'),
-    list: (params = {}) => api.get('/rest/approval-documents', { params }),
-    detail: (atrzDocId) => api.get(`/rest/approval-documents/${atrzDocId}`),
-    create: (payload, files = []) => api.post('/rest/approval-documents', toMultipartPayload(payload, files), {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-    }),
-    approve: (atrzDocId, data) => api.post(`/rest/approval-documents/${atrzDocId}/approve`, data),
-    reject: (atrzDocId, data) => api.post(`/rest/approval-documents/${atrzDocId}/reject`, data),
-    retract: (atrzDocId) => api.post(`/rest/approval-documents/${atrzDocId}/retract`),
-    customLines: () => api.get('/rest/approval-customline'),
-    createCustomLine: (data) => api.post('/rest/approval-customline', data),
-    deleteCustomLine: (name) => api.delete(`/rest/approval-customline/${encodeURIComponent(name)}`),
-    vacationBalance: () => api.get('/rest/approval-vacation/E101'),
-    tempList: () => api.get('/rest/approval-temp'),
-    tempDetail: (atrzTempSqn) => api.get(`/rest/approval-temp/${atrzTempSqn}`),
-    saveTemp: (payload, files = []) => api.post('/rest/approval-temp', toMultipartPayload(payload, files), {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-    }),
-    updateTemp: (atrzTempSqn, payload, files = []) => api.put(`/rest/approval-temp/${atrzTempSqn}`, toMultipartPayload(payload, files), {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-    }),
-    deleteTemp: (atrzTempSqn) => api.delete(`/rest/approval-temp/${atrzTempSqn}`),
+    summary: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.summary() : api.get('/rest/approval-documents/summary')),
+    list: (params = {}) => (firebaseBackendEnabled() ? firebaseApprovalBridge.list(params) : api.get('/rest/approval-documents', { params })),
+    detail: (atrzDocId) => (firebaseBackendEnabled() ? firebaseApprovalBridge.detail(atrzDocId) : api.get(`/rest/approval-documents/${atrzDocId}`)),
+    create: (payload, files = []) => (
+        firebaseBackendEnabled()
+            ? firebaseApprovalBridge.create(payload, files)
+            : api.post('/rest/approval-documents', toMultipartPayload(payload, files), {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            })
+    ),
+    approve: (atrzDocId, data) => (firebaseBackendEnabled() ? firebaseApprovalBridge.approve(atrzDocId, data) : api.post(`/rest/approval-documents/${atrzDocId}/approve`, data)),
+    reject: (atrzDocId, data) => (firebaseBackendEnabled() ? firebaseApprovalBridge.reject(atrzDocId, data) : api.post(`/rest/approval-documents/${atrzDocId}/reject`, data)),
+    retract: (atrzDocId) => (firebaseBackendEnabled() ? firebaseApprovalBridge.retract(atrzDocId) : api.post(`/rest/approval-documents/${atrzDocId}/retract`)),
+    customLines: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.customLines() : api.get('/rest/approval-customline')),
+    createCustomLine: (data) => (firebaseBackendEnabled() ? firebaseApprovalBridge.createCustomLine(data) : api.post('/rest/approval-customline', data)),
+    deleteCustomLine: (name) => (firebaseBackendEnabled() ? firebaseApprovalBridge.deleteCustomLine(name) : api.delete(`/rest/approval-customline/${encodeURIComponent(name)}`)),
+    vacationBalance: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.vacationBalance() : api.get('/rest/approval-vacation/E101')),
+    tempList: () => (firebaseBackendEnabled() ? firebaseApprovalBridge.tempList() : api.get('/rest/approval-temp')),
+    tempDetail: (atrzTempSqn) => (firebaseBackendEnabled() ? firebaseApprovalBridge.tempDetail(atrzTempSqn) : api.get(`/rest/approval-temp/${atrzTempSqn}`)),
+    saveTemp: (payload, files = []) => (
+        firebaseBackendEnabled()
+            ? firebaseApprovalBridge.saveTemp(payload, files)
+            : api.post('/rest/approval-temp', toMultipartPayload(payload, files), {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            })
+    ),
+    updateTemp: (atrzTempSqn, payload, files = []) => (
+        firebaseBackendEnabled()
+            ? firebaseApprovalBridge.updateTemp(atrzTempSqn, payload, files)
+            : api.put(`/rest/approval-temp/${atrzTempSqn}`, toMultipartPayload(payload, files), {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            })
+    ),
+    deleteTemp: (atrzTempSqn) => (firebaseBackendEnabled() ? firebaseApprovalBridge.deleteTemp(atrzTempSqn) : api.delete(`/rest/approval-temp/${atrzTempSqn}`)),
 };
 
 export const contractAPI = {
@@ -293,29 +320,29 @@ export const boardAPI = {
 };
 
 export const attendanceAPI = {
-    today: (userId, workYmd = new Date().toISOString().slice(0, 10).replace(/-/g, '')) => api.get(`/rest/attendance/${userId}/${workYmd}`),
-    history: (userId) => api.get(`/rest/attendance/${userId}`),
-    clockIn: () => api.post('/rest/attendance'),
-    clockOut: (workYmd) => api.put('/rest/attendance', { workYmd }),
-    week: () => api.get('/rest/attendance-stats/week'),
-    month: () => api.get('/rest/attendance-stats/month'),
-    monthList: () => api.get('/rest/attendance-stats/month-list'),
-    depart: () => api.get('/rest/attendance-stats/depart'),
+    today: (userId, workYmd = new Date().toISOString().slice(0, 10).replace(/-/g, '')) => (firebaseBackendEnabled() ? firebaseAttendanceBridge.today(userId, workYmd) : api.get(`/rest/attendance/${userId}/${workYmd}`)),
+    history: (userId) => (firebaseBackendEnabled() ? firebaseAttendanceBridge.history(userId) : api.get(`/rest/attendance/${userId}`)),
+    clockIn: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.clockIn() : api.post('/rest/attendance')),
+    clockOut: (workYmd) => (firebaseBackendEnabled() ? firebaseAttendanceBridge.clockOut(workYmd) : api.put('/rest/attendance', { workYmd })),
+    week: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.week() : api.get('/rest/attendance-stats/week')),
+    month: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.month() : api.get('/rest/attendance-stats/month')),
+    monthList: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.monthList() : api.get('/rest/attendance-stats/month-list')),
+    depart: () => (firebaseBackendEnabled() ? firebaseAttendanceBridge.depart() : api.get('/rest/attendance-stats/depart')),
 };
 
 export const calendarAPI = {
-    events: (params = {}) => api.get('/rest/calendar/events', { params }),
+    events: (params = {}) => (firebaseBackendEnabled() ? firebaseCalendarBridge.events(params) : api.get('/rest/calendar/events', { params })),
     user: () => api.get('/rest/calendar-user'),
     userDetail: (userSchdId) => api.get(`/rest/calendar-user/${userSchdId}`),
-    createUser: (data) => api.post('/rest/calendar-user', data),
-    updateUser: (userSchdId, data) => api.put(`/rest/calendar-user/${userSchdId}`, data),
-    deleteUser: (userSchdId) => api.delete(`/rest/calendar-user/${userSchdId}`),
+    createUser: (data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.createUser(data) : api.post('/rest/calendar-user', data)),
+    updateUser: (userSchdId, data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.updateUser(userSchdId, data) : api.put(`/rest/calendar-user/${userSchdId}`, data)),
+    deleteUser: (userSchdId) => (firebaseBackendEnabled() ? firebaseCalendarBridge.deleteUser(userSchdId) : api.delete(`/rest/calendar-user/${userSchdId}`)),
     dept: () => api.get('/rest/calendar-depart'),
     deptDetail: (deptSchdId) => api.get(`/rest/calendar-depart/${deptSchdId}`),
-    createDept: (data) => api.post('/rest/calendar-depart', data),
-    updateDept: (deptSchdId, data) => api.put(`/rest/calendar-depart/${deptSchdId}`, data),
-    deleteDept: (deptSchdId) => api.delete(`/rest/calendar-depart/${deptSchdId}`),
-    teamProjects: () => api.get('/rest/fullcalendar-team/project-list'),
+    createDept: (data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.createDept(data) : api.post('/rest/calendar-depart', data)),
+    updateDept: (deptSchdId, data) => (firebaseBackendEnabled() ? firebaseCalendarBridge.updateDept(deptSchdId, data) : api.put(`/rest/calendar-depart/${deptSchdId}`, data)),
+    deleteDept: (deptSchdId) => (firebaseBackendEnabled() ? firebaseCalendarBridge.deleteDept(deptSchdId) : api.delete(`/rest/calendar-depart/${deptSchdId}`)),
+    teamProjects: () => (firebaseBackendEnabled() ? firebaseCalendarBridge.teamProjects() : api.get('/rest/fullcalendar-team/project-list')),
 };
 
 export const emailAPI = {
@@ -374,7 +401,7 @@ export const messengerAPI = {
 };
 
 export const communityAPI = {
-    list: (params = {}) => api.get('/rest/communities', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params }),
+    list: (params = {}) => (firebaseBackendEnabled() ? firebaseCommunityBridge.list(params) : api.get('/rest/communities', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params })),
     search: (params = {}) => api.get('/rest/communities/search', { params: typeof params === 'string' ? (params ? { q: params } : {}) : params }),
     detail: (communityId) => api.get(`/rest/communities/${communityId}`),
     create: (payload, files = {}) => {
@@ -414,36 +441,40 @@ export const communityAPI = {
 };
 
 export const projectAPI = {
-    list: () => api.get('/rest/project'),
-    detail: (bizId) => api.get(`/rest/project/${bizId}`),
-    create: (data) => api.post('/rest/project', data),
-    update: (bizId, data) => api.put(`/rest/project/${bizId}`, data),
-    setStatus: (bizId, bizSttsCd) => api.patch(`/rest/project/${bizId}/status`, { bizSttsCd }),
+    list: () => (firebaseBackendEnabled() ? firebaseProjectBridge.list() : api.get('/rest/project')),
+    detail: (bizId) => (firebaseBackendEnabled() ? firebaseProjectBridge.detail(bizId) : api.get(`/rest/project/${bizId}`)),
+    create: (data) => (firebaseBackendEnabled() ? firebaseProjectBridge.create(data) : api.post('/rest/project', data)),
+    update: (bizId, data) => (firebaseBackendEnabled() ? firebaseProjectBridge.update(bizId, data) : api.put(`/rest/project/${bizId}`, data)),
+    setStatus: (bizId, bizSttsCd) => (firebaseBackendEnabled() ? firebaseProjectBridge.setStatus(bizId, bizSttsCd) : api.patch(`/rest/project/${bizId}/status`, { bizSttsCd })),
     members: (bizId) => api.get(`/rest/project/${bizId}/members`),
-    tasks: (bizId) => api.get(`/rest/project/${bizId}/tasks`),
-    createTask: (bizId, data) => api.post(`/rest/project/${bizId}/tasks`, data),
-    updateTask: (taskId, data) => api.put(`/rest/project/tasks/${taskId}`, data),
-    setTaskStatus: (taskId, taskSttsCd) => api.patch(`/rest/project/tasks/${taskId}/status`, { taskSttsCd }),
-    deleteTask: (taskId) => api.delete(`/rest/project/tasks/${taskId}`),
+    tasks: (bizId) => (firebaseBackendEnabled() ? firebaseProjectBridge.tasks(bizId) : api.get(`/rest/project/${bizId}/tasks`)),
+    createTask: (bizId, data) => (firebaseBackendEnabled() ? firebaseProjectBridge.createTask(bizId, data) : api.post(`/rest/project/${bizId}/tasks`, data)),
+    updateTask: (taskId, data) => (firebaseBackendEnabled() ? firebaseProjectBridge.updateTask(taskId, data) : api.put(`/rest/project/tasks/${taskId}`, data)),
+    setTaskStatus: (taskId, taskSttsCd) => (firebaseBackendEnabled() ? firebaseProjectBridge.setTaskStatus(taskId, taskSttsCd) : api.patch(`/rest/project/tasks/${taskId}/status`, { taskSttsCd })),
+    deleteTask: (taskId) => (firebaseBackendEnabled() ? firebaseProjectBridge.deleteTask(taskId) : api.delete(`/rest/project/tasks/${taskId}`)),
 };
 
 export const meetingAPI = {
-    rooms: () => api.get('/rest/meeting/room'),
-    createRoom: (data) => api.post('/rest/meeting/room', data),
-    reservations: (params) => api.get('/rest/meeting/reservations', { params }),
-    detail: (reservationId) => api.get(`/rest/meeting/reservations/${reservationId}`),
-    createReservation: (data) => api.post('/rest/meeting', data),
-    updateReservation: (data) => api.put('/rest/meeting', data),
-    deleteReservation: (reservationId) => api.delete(`/rest/meeting/${reservationId}`),
+    rooms: () => (firebaseBackendEnabled() ? firebaseMeetingBridge.rooms() : api.get('/rest/meeting/room')),
+    createRoom: (data) => (firebaseBackendEnabled() ? firebaseMeetingBridge.createRoom(data) : api.post('/rest/meeting/room', data)),
+    reservations: (params) => (firebaseBackendEnabled() ? firebaseMeetingBridge.reservations(params) : api.get('/rest/meeting/reservations', { params })),
+    detail: (reservationId) => (firebaseBackendEnabled() ? firebaseMeetingBridge.detail(reservationId) : api.get(`/rest/meeting/reservations/${reservationId}`)),
+    createReservation: (data) => (firebaseBackendEnabled() ? firebaseMeetingBridge.createReservation(data) : api.post('/rest/meeting', data)),
+    updateReservation: (data) => (firebaseBackendEnabled() ? firebaseMeetingBridge.updateReservation(data) : api.put('/rest/meeting', data)),
+    deleteReservation: (reservationId) => (firebaseBackendEnabled() ? firebaseMeetingBridge.deleteReservation(reservationId) : api.delete(`/rest/meeting/${reservationId}`)),
 };
 
 export const myPageAPI = {
-    profile: () => api.get('/rest/mypage'),
-    updateProfile: (data) => api.put('/rest/mypage/profile', toFormData(data), {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
-    }),
+    profile: () => (firebaseBackendEnabled() ? firebaseCommonBridge.getMyProfile() : api.get('/rest/mypage')),
+    updateProfile: (data) => (
+        firebaseBackendEnabled()
+            ? firebaseCommonBridge.updateProfile(data)
+            : api.put('/rest/mypage/profile', toFormData(data), {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            })
+    ),
     changePassword: (data) => api.put('/rest/mypage/password', data),
 };
 

@@ -1,6 +1,6 @@
-﻿import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -22,7 +22,7 @@ export default function LoginPage() {
             await login(userId, userPw);
             navigate('/', { replace: true });
         } catch (err) {
-            setError(err.response?.data?.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해 주세요.');
+            setError(err.response?.data?.message || err.message || '로그인에 실패했습니다. 아이디와 비밀번호를 확인해 주세요.');
         } finally {
             setLoading(false);
         }

@@ -14,6 +14,13 @@ backend/Starworks-groupware/.mvn/wrapper/maven-wrapper.jar
 !.env.production.example
 cloudflare/.dev.vars
 cloudflare/.env*
+firebase/.firebaserc
+firebase/.firebase/
+firebase/functions/node_modules/
+firebase/functions/lib/
+firebase/.env*
+frontend/.env*
+!frontend/.env.firebase.example
 
 # OS / editor
 .DS_Store

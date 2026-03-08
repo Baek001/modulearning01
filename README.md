@@ -56,6 +56,36 @@ npx wrangler deploy
 
 This path keeps the frontend same-origin and routes `/rest`, `/common`, `/mail`, `/chat`, `/file`, `/folder`, and `/starworks-groupware-websocket` to the Spring Boot container. The initial container config is intentionally single-instance because messenger currently uses Spring's in-memory STOMP broker.
 
+## Firebase-first migration scaffold
+The repo now also contains a Firebase-native migration workspace under [firebase](C:/swb/firebase). This is a parallel migration path, not a hard cutover of the current Spring stack.
+
+What is already in place:
+- `frontend/src/services/firebase/*`: Firebase SDK bootstrap, callable Functions wrapper, Storage helper, and Firestore messenger adapter
+- `frontend/src/contexts/AuthContext.jsx`: optional Firebase Auth session path when `VITE_PLATFORM_BACKEND=firebase`
+- `frontend/.env.firebase.example`: Vite client config template for Firebase mode
+- `firebase/functions`: TypeScript Cloud Functions entrypoint for auth/profile and initial messenger actions
+- `firebase/firestore.rules`, `firebase/storage.rules`, `firebase/dataconnect/*`: base Firebase data/runtime configuration
+
+How to use the Firebase path:
+1. Copy `frontend/.env.firebase.example` to `frontend/.env.production` or `frontend/.env.local` and fill in real Firebase values.
+2. Copy `firebase/.firebaserc.example` to `firebase/.firebaserc` and set your Firebase project id.
+3. Build the functions package:
+
+```powershell
+cd firebase\functions
+npm install
+npm run build
+```
+
+4. Generate or deploy Data Connect assets and Firebase resources from the `firebase` workspace:
+
+```powershell
+cd ..\
+npm run deploy
+```
+
+Important: the default runtime path is still the existing Spring Boot backend. The Firebase migration scaffold is opt-in and meant to let you port domains incrementally without breaking the current app while the rewrite is in progress.
+
 ## Current integration status
 - Fully live today: login, organization, project, calendar, board, attendance, meeting, mypage basics
 - Beta but real-data based: dashboard, approval, email, messenger
