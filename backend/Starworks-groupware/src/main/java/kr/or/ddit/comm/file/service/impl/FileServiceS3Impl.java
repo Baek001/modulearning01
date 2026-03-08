@@ -24,7 +24,7 @@ public class FileServiceS3Impl {
     private final S3Client s3Client;
     private final ObjectStorageUrlResolver objectStorageUrlResolver;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${cloud.aws.s3.bucket:}")
     private String bucketName;
 
     public String uploadFile(MultipartFile file, String saveName, String folder) throws IOException {

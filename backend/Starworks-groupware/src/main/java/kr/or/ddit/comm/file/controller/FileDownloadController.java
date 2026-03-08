@@ -39,7 +39,7 @@ public class FileDownloadController {
     private final DocumentService docService;
     private final DocumentUserFileFolderService userFolderService;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${cloud.aws.s3.bucket:}")
     private String bucket;
 
     @Value("${file-info.storage-mode:s3}")

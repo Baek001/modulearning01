@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -16,10 +17,10 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 @Configuration
 public class S3Config {
 
-    @Value("${cloud.aws.credentials.access-key}")
+    @Value("${cloud.aws.credentials.access-key:}")
     String accessKey;
 
-    @Value("${cloud.aws.credentials.secret-key}")
+    @Value("${cloud.aws.credentials.secret-key:}")
     String secretKey;
 
     @Value("${cloud.aws.region.static:ap-northeast-2}")
@@ -34,10 +35,15 @@ public class S3Config {
     @Bean
     public S3Client s3Client() {
         S3ClientBuilder builder = S3Client.builder()
-            .region(Region.of(StringUtils.defaultIfBlank(region, "ap-northeast-2")))
-            .credentialsProvider(
-                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey))
+            .region(Region.of(StringUtils.defaultIfBlank(region, "ap-northeast-2")));
+
+        if (StringUtils.isNotBlank(accessKey) && StringUtils.isNotBlank(secretKey)) {
+            builder.credentialsProvider(
+                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey.trim(), secretKey.trim()))
             );
+        } else {
+            builder.credentialsProvider(AnonymousCredentialsProvider.create());
+        }
 
         if (StringUtils.isNotBlank(endpoint)) {
             builder.endpointOverride(URI.create(endpoint.trim()));

@@ -23,7 +23,16 @@ function pickDefined(values) {
   );
 }
 
+function hasObjectStorageCredentials(env) {
+  return [env.AWS_ACCESS_KEY, env.AWS_SECRET_KEY, env.AWS_BUCKET].every(
+    (value) => typeof value === "string" && value.length > 0,
+  );
+}
+
 function backendEnvVars(env) {
+  const useLocalStorage =
+    String(env.FILE_STORAGE_MODE || "").toLowerCase() === "local" || !hasObjectStorageCredentials(env);
+
   return pickDefined({
     DB_URL: env.DB_URL,
     DB_USERNAME: env.DB_USERNAME,
@@ -36,16 +45,16 @@ function backendEnvVars(env) {
     COOKIE_SECURE: env.COOKIE_SECURE || "true",
     COOKIE_SAME_SITE: env.COOKIE_SAME_SITE || "Lax",
     COOKIE_MAX_AGE: env.COOKIE_MAX_AGE || "86400",
-    FILE_STORAGE_MODE: env.FILE_STORAGE_MODE || "s3",
+    FILE_STORAGE_MODE: useLocalStorage ? "local" : env.FILE_STORAGE_MODE || "s3",
     FILE_STORAGE_URL: env.FILE_STORAGE_URL || "/starworks_medias",
-    FILE_STORAGE_PATH: env.FILE_STORAGE_PATH,
+    FILE_STORAGE_PATH: env.FILE_STORAGE_PATH || "file:/tmp/starworks_medias/",
     FORWARD_HEADERS_STRATEGY: env.FORWARD_HEADERS_STRATEGY || "framework",
-    AWS_ACCESS_KEY: env.AWS_ACCESS_KEY,
-    AWS_SECRET_KEY: env.AWS_SECRET_KEY,
-    AWS_REGION: env.AWS_REGION || "auto",
-    AWS_BUCKET: env.AWS_BUCKET,
-    AWS_ENDPOINT: env.AWS_ENDPOINT,
-    AWS_PUBLIC_BASE_URL: env.AWS_PUBLIC_BASE_URL,
+    AWS_ACCESS_KEY: useLocalStorage ? "" : env.AWS_ACCESS_KEY,
+    AWS_SECRET_KEY: useLocalStorage ? "" : env.AWS_SECRET_KEY,
+    AWS_REGION: useLocalStorage ? "" : env.AWS_REGION || "auto",
+    AWS_BUCKET: useLocalStorage ? "" : env.AWS_BUCKET,
+    AWS_ENDPOINT: useLocalStorage ? "" : env.AWS_ENDPOINT,
+    AWS_PUBLIC_BASE_URL: useLocalStorage ? "" : env.AWS_PUBLIC_BASE_URL,
     AWS_PATH_STYLE_ACCESS: env.AWS_PATH_STYLE_ACCESS || "true",
     APP_LOG_LEVEL: env.APP_LOG_LEVEL || "info",
     REQUEST_MAPPING_LOG_LEVEL: env.REQUEST_MAPPING_LOG_LEVEL || "warn",
