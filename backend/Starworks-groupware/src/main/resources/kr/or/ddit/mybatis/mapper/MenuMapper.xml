@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	김주민            최초 생성
+ *  2025. 9. 27.        김주민       selectTotalRecord, selectMenuList 추가
+ *	2025. 9. 30.		임가영		selectMenuList에 파일 경로 가져오는 쿼리 추가
+ *  2025.10. 13.        윤서현		MenuId 시퀀스 변경
+ *
+
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.MenuMapper">
+<resultMap type="kr.or.ddit.vo.MenuVO" id="menuMap" autoMapping="true">
+	<collection property="fileList" ofType="kr.or.ddit.vo.FileDetailVO" autoMapping="true"></collection>
+</resultMap>
+
+<sql id="simpleSearchFrag">
+    <trim prefix="WHERE" prefixOverrides="AND">
+		M.DEL_YN = 'N' <if test="simpleSearch neq null">
+			<if
+				test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleSearch.searchWord)">
+				AND <choose> <when test="simpleSearch.searchType eq 'menuNm'">
+						INSTR(MENU_NM, #{simpleSearch.searchWord}) > 0
+					</when>
+					<when test="simpleSearch.searchType eq 'categoryNm'">
+						INSTR(CATEGORY_NM, #{simpleSearch.searchWord}) > 0
+					</when>
+					<otherwise>
+						(
+							INSTR(MENU_NM, #{simpleSearch.searchWord}) > 0
+							OR
+							INSTR(CATEGORY_NM, #{simpleSearch.searchWord}) > 0
+						)
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+	</trim>
+</sql>
+
+	<sql id="detailSearchFrag">
+		<trim prefix="WHERE" prefixOverrides="AND">
+			<if test="detailSearch neq null">
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(detailSearch.menuNm)">
+					AND INSTR(MENU_NM, #{detailSearch.menuNm}) > 0
+				</if>
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(detailSearch.categoryNm)">
+					AND INSTR(CATEGORY_NM, #{detailSearch.categoryNm}) > 0
+				</if>
+			</if>
+		</trim>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		FROM MENU M
+		<include refid="simpleSearchFrag"/>
+		<include refid="detailSearchFrag"/>
+	</select>
+
+<insert id="insertMenu">
+	INSERT INTO MENU (
+		MENU_ID
+		, MENU_NM
+		, CATEGORY_NM
+		, RELEASE_YMD
+		, STANDARD_CD
+		, PRICE_AMT
+		, COST_RATIO_AMT
+		, INGREDIENT_CONTENT
+		, MARKETING_CONTENT
+		, MENU_FILE_ID
+	) VALUES (
+		'MENU' || LPAD(nextval('MENU_ID_SEQ')::text, 8, '0')
+		, #{menuNm}
+		, #{categoryNm}
+		, #{releaseYmd}
+		, #{standardCd}
+		, #{priceAmt}
+		, #{costRatioAmt}
+		, #{ingredientContent}
+		, #{marketingContent}
+		, #{menuFileId}
+	)
+</insert>
+
+<select id="selectMenuList" resultType="kr.or.ddit.vo.MenuVO" resultMap="menuMap">
+	WITH MV AS(
+		SELECT
+			M.MENU_ID
+			, M.MENU_NM
+			, M.CATEGORY_NM
+			, M.RELEASE_YMD
+			, M.STANDARD_CD
+			, M.PRICE_AMT
+			, M.COST_RATIO_AMT
+			, M.INGREDIENT_CONTENT
+			, M.MARKETING_CONTENT
+			, M.MENU_FILE_ID
+			, M.DEL_YN
+			, FD.FILE_PATH
+		FROM MENU M
+		LEFT JOIN
+			FILE_DETAIL FD ON M.MENU_FILE_ID = FD.FILE_ID
+			<include refid="simpleSearchFrag"/>
+			<include refid="detailSearchFrag"/>
+		ORDER BY MENU_ID DESC
+	)
+
+	SELECT *
+	FROM (
+		SELECT
+			ROW_NUMBER() OVER () AS RNUM, MV.*
+		FROM
+			MV
+		)
+	WHERE
+		RNUM BETWEEN #{startRow} AND #{endRow}
+</select>
+
+<select id="selectMenuListNonPaging" resultType="kr.or.ddit.vo.MenuVO">
+	SELECT
+		MENU_ID
+		, MENU_NM
+		, CATEGORY_NM
+		, RELEASE_YMD
+		, STANDARD_CD
+		, PRICE_AMT
+		, COST_RATIO_AMT
+		, INGREDIENT_CONTENT
+		, MARKETING_CONTENT
+		, MENU_FILE_ID
+		, DEL_YN
+	FROM MENU
+	WHERE DEL_YN = 'N'
+</select>
+
+<select id="selectMenu" resultType="kr.or.ddit.vo.MenuVO">
+	SELECT
+		MENU_ID
+		, MENU_NM
+		, CATEGORY_NM
+		, RELEASE_YMD
+		, STANDARD_CD
+		, PRICE_AMT
+		, COST_RATIO_AMT
+		, INGREDIENT_CONTENT
+		, MARKETING_CONTENT
+		, MENU_FILE_ID
+		, DEL_YN
+	FROM MENU
+	WHERE MENU_ID = #{menuId}
+</select>
+
+<update id="updateMenu">
+	UPDATE MENU
+		SET
+			MENU_NM = #{menuNm}
+			, CATEGORY_NM = #{categoryNm}
+			, RELEASE_YMD = #{releaseYmd}
+			, PRICE_AMT = #{priceAmt}
+			, COST_RATIO_AMT = #{costRatioAmt}
+			, INGREDIENT_CONTENT = #{ingredientContent}
+			, MARKETING_CONTENT = #{marketingContent}
+			, MENU_FILE_ID = #{menuFileId}
+			, DEL_YN = #{delYn}
+	WHERE MENU_ID = #{menuId}
+</update>
+
+<update id="deleteMenu">
+	UPDATE MENU
+		SET DEL_YN = 'Y'
+	WHERE MENU_ID = #{menuId}
+</update>
+
+</mapper>

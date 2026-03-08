@@ -1,0 +1,15 @@
+﻿{
+  "bizNm": "통합 검증 프로젝트",
+  "bizTypeCd": "B201",
+  "bizSttsCd": "B301",
+  "bizGoal": "프로젝트와 일정 실연동 확인",
+  "bizDetail": "프론트엔드, 백엔드, DB 통합 검증용 프로젝트",
+  "bizScope": "프로젝트 페이지와 일정 페이지",
+  "bizBdgt": 5000000,
+  "bizPrgrs": 0,
+  "strtBizDt": "2026-03-06T09:00",
+  "endBizDt": "2026-03-31T18:00",
+  "members": [
+    { "bizUserId": "user01", "bizAuthCd": "B102" }
+  ]
+}

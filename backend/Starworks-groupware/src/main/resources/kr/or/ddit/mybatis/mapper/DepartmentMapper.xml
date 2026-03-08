@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	윤서현            최초 생성
+ *	2025.10. 21.		홍현택		selectDepartmentUserCounts 추가
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.DepartmentMapper">
+
+	<!-- 본부용 (상위부서 없음) -->
+	<select id="getNextTopDeptId" resultType="String">
+	  SELECT 'DP' || LPAD(COALESCE(MAX(TO_NUMBER(SUBSTR(DEPT_ID, 3, 3))), 0) + 1, 3, '0') || '000'
+	  FROM DEPARTMENT
+	  WHERE SUBSTR(DEPT_ID, 6, 3) = '000'
+	</select>
+
+	<!-- 하위부서용 (상위부서 있음) -->
+	<select id="getNextChildDeptId" parameterType="String" resultType="String">
+	  SELECT SUBSTR(#{upDeptId}, 1, 5)
+	         || LPAD(COALESCE(MAX(TO_NUMBER(SUBSTR(DEPT_ID, 6, 3))), 0) + 1, 3, '0')
+	  FROM DEPARTMENT
+	  WHERE UP_DEPT_ID = #{upDeptId}
+	</select>
+
+	<insert id="insertDepartment">
+		INSERT INTO DEPARTMENT (
+	        DEPT_NM,
+	        USE_YN,
+	        DEPT_ID,
+	        UP_DEPT_ID,
+	        SORT_NUM
+	    )
+	    VALUES (
+	        #{deptNm},
+	        'Y',
+	        #{deptId},
+	        #{upDeptId},
+	        (
+	            SELECT COALESCE(MAX(SORT_NUM), 0) + 1
+	            FROM DEPARTMENT
+	            WHERE
+	                (UP_DEPT_ID = #{upDeptId})
+	                OR (UP_DEPT_ID IS NULL AND #{upDeptId} IS NULL)
+	        )
+	    )
+	</insert>
+
+	<select id="selectDepartmentList" resultType="kr.or.ddit.vo.DepartmentVO">
+		SELECT
+			DEPT_NM
+			, USE_YN
+			, DEPT_ID
+			, UP_DEPT_ID
+		FROM
+			DEPARTMENT
+		ORDER BY DEPT_ID
+	</select>
+
+	<select id="selectDepartment" resultType="kr.or.ddit.vo.DepartmentVO">
+		SELECT
+			DEPT_NM
+			, USE_YN
+			, DEPT_ID
+			, UP_DEPT_ID
+		FROM
+			DEPARTMENT
+		WHERE
+			DEPT_ID = #{deptId}
+	</select>
+
+	<!-- 부서 인원 수 확인 (삭제 전 체크용) -->
+	<select id="countUsersInDepartment" parameterType="string" resultType="int">
+		SELECT COUNT(*)
+		FROM USERS
+		WHERE DEPT_ID = #{deptId}
+		  AND COALESCE(RSGNTN_YN, 'N') = 'N'  <!-- 재직자만 -->
+	</select>
+
+
+	<delete id="deleteDepartment">
+		UPDATE DEPARTMENT
+		SET USE_YN = 'N'
+		WHERE DEPT_ID = #{deptId}
+	</delete>
+
+
+<!-- 부서 별 템플릿 사용자 수  관리자 페이지 차트용-->
+    <select id="selectDepartmentUserCounts" resultType="map">
+        SELECT
+            COALESCE(P.DEPT_NM, D.DEPT_NM) AS division,
+            D.DEPT_NM AS department,
+            D.DEPT_ID,
+            D.UP_DEPT_ID,
+            D.USE_YN,
+            D.SORT_NUM,
+            COUNT(U.USER_ID) AS usercount
+        FROM
+            DEPARTMENT D
+        LEFT JOIN
+            DEPARTMENT P ON D.UP_DEPT_ID = P.DEPT_ID
+        LEFT JOIN
+            USERS U ON D.DEPT_ID = U.DEPT_ID
+        WHERE
+            COALESCE(P.DEPT_NM, D.DEPT_NM) != '모두의러닝카페㈜'
+            AND D.USE_YN = 'Y'
+        GROUP BY
+            COALESCE(P.DEPT_NM, D.DEPT_NM), D.DEPT_NM, D.DEPT_ID, D.UP_DEPT_ID, D.USE_YN, D.SORT_NUM
+        ORDER BY
+            division, department
+    </select>
+
+	<update id="updateDepartment">
+		UPDATE DEPARTMENT
+		SET
+			DEPT_NM = #{deptNm}
+		WHERE DEPT_ID = #{deptId}
+	</update>
+
+</mapper>

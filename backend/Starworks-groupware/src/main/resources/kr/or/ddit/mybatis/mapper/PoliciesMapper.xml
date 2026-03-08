@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	임가영           최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.PoliciesMapper">
+
+	<resultMap type="kr.or.ddit.vo.PoliciesDetailVO" id="policiesDetailMap" autoMapping="true">
+	</resultMap>
+
+	<resultMap type="kr.or.ddit.vo.PoliciesVO" id="policiesMap" autoMapping="true">
+		<id property="featureId" column="FEATURE_ID"/>
+		<collection property="policiesDetailList" resultMap="policiesDetailMap"></collection>
+	</resultMap>
+
+	<select id="selectPoliciesList" resultType="kr.or.ddit.vo.PoliciesVO" resultMap="policiesMap">
+		SELECT
+			P.FEATURE_ID
+			, P.REMARK
+			, P.CRT_DT
+			, P.MOD_DT
+			, F.FEATURE_NAME
+			, PD.DEPT_ID
+			, PD.JBGD_CD
+			, J.JBGD_NM
+			, D.DEPT_NM
+		FROM
+			POLICIES P
+		INNER JOIN
+			FEATURES F ON F.FEATURE_ID = P.FEATURE_ID
+		LEFT JOIN
+			POLICIES_DETAIL PD ON PD.FEATURE_ID = P.FEATURE_ID
+		LEFT JOIN
+			JOB_GRADE J ON J.JBGD_CD = PD.JBGD_CD
+		LEFT JOIN
+			DEPARTMENT D ON D.DEPT_ID = PD.DEPT_ID
+		ORDER BY
+			P.CRT_DT DESC
+	</select>
+
+	<select id="selectPolicies" resultType="kr.or.ddit.vo.PoliciesVO" resultMap="policiesMap">
+		SELECT
+			P.FEATURE_ID
+			, P.REMARK
+			, F.FEATURE_NAME
+			, PD.DEPT_ID
+			, PD.JBGD_CD
+			, J.JBGD_NM
+			, D.DEPT_NM
+		FROM
+			POLICIES P
+		INNER JOIN
+			FEATURES F ON F.FEATURE_ID = P.FEATURE_ID
+		LEFT JOIN
+			POLICIES_DETAIL PD ON PD.FEATURE_ID = P.FEATURE_ID
+		LEFT JOIN
+			JOB_GRADE J ON J.JBGD_CD = PD.JBGD_CD
+		LEFT JOIN
+			DEPARTMENT D ON D.DEPT_ID = PD.DEPT_ID
+		WHERE
+            P.FEATURE_ID = #{featureId}
+	</select>
+
+	<insert id="insertPolicies">
+		INSERT INTO
+			POLICIES (
+				FEATURE_ID
+				, REMARK
+			) VALUES (
+				#{featureId}
+				, #{remark}
+			)
+	</insert>
+
+	<update id="updatePolicies">
+		UPDATE POLICIES
+		SET
+			REMARK = #{remark}
+		WHERE
+			FEATURE_ID = #{featureId}
+	</update>
+
+	<!-- 권한 정책 수정시, 수정일 update -->
+	<update id="updatePoliciesModDt">
+		UPDATE POLICIES
+		SET
+			MOD_DT = CURRENT_TIMESTAMP
+		WHERE
+			FEATURE_ID = #{featureId}
+	</update>
+
+	<delete id="deletePolices">
+		DELETE FROM
+			POLICIES
+		WHERE
+			FEATURE_ID = #{featureId}
+	</delete>
+</mapper>

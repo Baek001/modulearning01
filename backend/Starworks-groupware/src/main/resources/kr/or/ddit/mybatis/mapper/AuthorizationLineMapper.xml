@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	윤서현            최초 생성
+ *	2025. 10.01.		홍현택		 결재선 조회 메서드 + 쿼리 작성
+ *	2025. 10.02. 		홍현택			결재 승인 쿼리 작성
+ *	2025. 10.02.		홍현택			전결처리 쿼리 추가
+ * 	2025. 10. 5. 		홍현택			 결재문서 열람 처리 (미열람 -> 미처리)
+ *	2025. 10.10.		홍현택			반려 쿼리 추가 updateRejectLine
+ *	2025. 10.10.		홍현택			회수 시 결재선 상태 Null updateAllLineStatusToNullByDocId 쿼리 추가
+ *	2025. 10.23.		홍현택		selectAuthorizationLineList 쿼리 수정
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.AuthorizationLineMapper">
+
+	<insert id="insertAuthLine">
+		<selectKey resultType="int" keyProperty="atrzLineSqn" order="BEFORE">
+			select nextval('ATRZ_LINE_SQN_SEQ')
+		</selectKey>
+		INSERT INTO AUTHORIZATION_LINE(
+	        ATRZ_LINE_SQN,
+	        ATRZ_DOC_ID,
+	        ATRZ_LINE_SEQ,
+	        ATRZ_APPR_USER_ID,
+	        ATRZ_APPR_STTS,
+	        PRCS_DT,
+	        SIGN_FILE_ID,
+	        ATRZ_OPNN,
+	        ATRZ_ACT
+	    )
+	    VALUES(
+	        #{atrzLineSqn},
+	        #{atrzDocId},
+	        #{atrzLineSeq},
+	        #{atrzApprUserId},
+	        #{atrzApprStts},
+	        #{prcsDt},
+	        #{signFileId},
+	        #{atrzOpnn},
+	        #{atrzAct}
+	    )
+	</insert>
+
+	<select id="selectAuthorizationLineList"  parameterType="string" resultType="kr.or.ddit.vo.AuthorizationLineVO">
+		 SELECT
+		    l.ATRZ_LINE_SQN AS atrzLineSqn
+		    ,l.ATRZ_DOC_ID
+		    ,l.ATRZ_LINE_SEQ
+		    ,l.ATRZ_APPR_USER_ID
+		    ,u.USER_NM AS atrzApprUserNm
+			,j.JBGD_NM AS jbgdNm
+			,d.DEPT_NM AS deptNm
+			,fd.FILE_PATH AS filePath
+		   ,l.ATRZ_APPR_STTS
+		    ,l.PRCS_DT
+		    ,l.SIGN_FILE_ID
+		    ,l.ATRZ_OPNN
+		    ,l.ATRZ_ACT
+		    ,l.APPR_ATRZ_YN
+		FROM AUTHORIZATION_LINE l
+		JOIN USERS u
+		  ON l.ATRZ_APPR_USER_ID = u.USER_ID
+		LEFT JOIN JOB_GRADE j
+		  ON u.JBGD_CD = j.JBGD_CD
+		LEFT JOIN DEPARTMENT d
+		  ON u.DEPT_ID = d.DEPT_ID
+	    LEFT JOIN FILE_DETAIL fd
+	      ON u.USER_IMG_FILE_ID = fd.FILE_ID
+		WHERE l.ATRZ_DOC_ID = #{atrzDocId}
+		ORDER BY l.ATRZ_LINE_SEQ
+    </select>
+
+  <!-- =============================
+       현재 로그인 사용자의 미처리 결재 라인 1건 조회
+       - 상태: A301(미열람), A302(미처리)
+       - 본인 라인 중 가장 앞 순번 1건
+     ============================= -->
+  <select id="selectPendingLineForUser" resultType="kr.or.ddit.vo.AuthorizationLineVO">
+      SELECT
+        l.ATRZ_LINE_SQN       AS atrzLineSqn,
+        l.ATRZ_DOC_ID         AS atrzDocId,
+        l.ATRZ_LINE_SEQ       AS atrzLineSeq,
+        l.ATRZ_APPR_USER_ID   AS atrzApprUserId,
+        u.USER_NM             AS atrzApprUserNm,
+        l.ATRZ_APPR_STTS      AS atrzApprStts,
+        l.PRCS_DT             AS prcsDt,
+        l.SIGN_FILE_ID        AS signFileId,
+        l.ATRZ_OPNN           AS atrzOpnn,
+        l.ATRZ_ACT            AS atrzAct,
+        l.APPR_ATRZ_YN        AS apprAtrzYn
+      FROM AUTHORIZATION_LINE l
+      JOIN USERS u
+        ON u.USER_ID = l.ATRZ_APPR_USER_ID
+      WHERE l.ATRZ_DOC_ID = #{docId}
+        AND l.ATRZ_APPR_USER_ID = #{userId}
+        AND l.ATRZ_APPR_STTS IN ('A301','A302')
+      ORDER BY l.ATRZ_LINE_SEQ ASC, l.ATRZ_LINE_SQN ASC
+      LIMIT 1
+  </select>
+
+  <!-- =============================
+       선행 단계 중 '미처리' 라인 개수
+       - 미열람(A301) 또는 미처리(A302)
+     ============================= -->
+  <select id="selectPreviousUnapprovedCount" resultType="int">
+    SELECT COUNT(*)
+    FROM AUTHORIZATION_LINE
+    WHERE ATRZ_DOC_ID = #{docId}
+      AND ATRZ_LINE_SEQ &lt; #{lineSeq}
+      AND ATRZ_APPR_STTS IN ('A301','A302')
+  </select>
+
+  <!-- =============================
+       승인 처리(A401)
+       - 행위: A401(승인)
+       - 결재자 상태: A303(처리 완료)
+       - 처리일시: CURRENT_TIMESTAMP
+       * 주의: 인터페이스 파라미터명이 lineSqn (오타) 이므로 그대로 사용
+     ============================= -->
+  <update id="updateApproveLine">
+    UPDATE AUTHORIZATION_LINE
+    SET ATRZ_ACT       = 'A401',
+        ATRZ_APPR_STTS = 'A303',
+        PRCS_DT        = CURRENT_TIMESTAMP,
+        ATRZ_OPNN      = #{opinion},
+        SIGN_FILE_ID   = #{signFileId}
+    WHERE ATRZ_DOC_ID   = #{docId}
+      AND ATRZ_LINE_SQN = #{lineSqn}
+      AND ATRZ_APPR_STTS = 'A302'
+  </update>
+
+  <!-- =============================
+       반려 처리(A402)
+       - 행위: A402(반려)
+       - 결재자 상태: A303(처리 완료)
+       - 처리일시: CURRENT_TIMESTAMP
+     ============================= -->
+  <update id="updateRejectLine">
+    UPDATE AUTHORIZATION_LINE
+    SET ATRZ_ACT       = 'A402',
+        ATRZ_APPR_STTS = 'A303',
+        PRCS_DT        = CURRENT_TIMESTAMP,
+        ATRZ_OPNN      = #{opinion}
+    WHERE ATRZ_DOC_ID   = #{docId}
+      AND ATRZ_LINE_SQN = #{lineSqn}
+      AND ATRZ_APPR_STTS = 'A302'
+  </update>
+
+  <!-- =============================
+       문서 회수 시 모든 결재 라인의 상태를 NULL로 변경
+     ============================= -->
+  <update id="updateAllLineStatusToNullByDocId">
+    UPDATE AUTHORIZATION_LINE
+    SET ATRZ_APPR_STTS = NULL,
+        ATRZ_ACT = NULL,
+        PRCS_DT = NULL,
+        ATRZ_OPNN = NULL,
+        SIGN_FILE_ID = NULL
+    WHERE ATRZ_DOC_ID = #{docId}
+  </update>
+
+  <!-- =============================
+       이후 미처리 라인 존재 여부 (boolean)
+       - 미열람/미처리 라인이 남아있는지 확인
+     ============================= -->
+  <select id="existsNextPending" resultType="int">
+    SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+    FROM AUTHORIZATION_LINE
+    WHERE ATRZ_DOC_ID = #{docId}
+      AND ATRZ_LINE_SEQ > #{currentSeq}
+      AND ATRZ_APPR_STTS IN ('A301','A302')
+  </select>
+
+  <!-- =============================
+       문서 상태 코드 갱신 (AUTHORIZATION_DOCUMENT)
+       - 서비스에서 상태코드(A201~A206) 결정 후 호출
+     ============================= -->
+  <update id="updateDocumentStatus">
+    UPDATE AUTHORIZATION_DOCUMENT
+       SET CRNT_ATRZ_STEP_CD = #{stepCode}
+     WHERE ATRZ_DOC_ID = #{docId}
+  </update>
+
+	<!-- =================================================전결처리 쿼리 ======================================================== -->
+				<!-- 전결 처리: 현재 결재자 업데이트 -->
+	<!-- 전결 처리: 현재 결재자 업데이트 -->
+	<update id="updateLineForDelegation" parameterType="kr.or.ddit.vo.AuthorizationLineVO">
+	    UPDATE
+	    AUTHORIZATION_LINE
+	       SET
+	       ATRZ_ACT     = 'A403'
+	         ,ATRZ_APPR_STTS    = 'A303'
+	         ,PRCS_DT      = CURRENT_TIMESTAMP
+	         ,ATRZ_OPNN    = #{atrzOpnn}
+	         ,SIGN_FILE_ID = #{signFileId}
+	    WHERE ATRZ_DOC_ID   = #{atrzDocId}
+	      AND ATRZ_APPR_USER_ID  = #{atrzApprUserId}
+	      AND ATRZ_LINE_SQN      = #{atrzLineSqn}
+	      AND ATRZ_APPR_STTS     = 'A302'
+	</update>
+
+	<!-- 전결 처리: 이후 결재선 모두 승인 완료 처리 -->
+	<update id="updateSubsequentLinesAsDelegated">
+	    UPDATE
+	    AUTHORIZATION_LINE
+	       SET
+	       ATRZ_ACT   = 'A401'
+	         ,ATRZ_APPR_STTS  = 'A303'
+	         ,PRCS_DT    = CURRENT_TIMESTAMP
+	    WHERE ATRZ_DOC_ID   = #{docId}
+	      AND ATRZ_LINE_SQN      > #{lineSqn}
+	      AND (ATRZ_APPR_STTS IS NULL OR ATRZ_APPR_STTS IN ('A301', 'A302'))
+	</update>
+
+
+
+
+	<!-- =================================================================== -->
+	<!-- 사용자가 요청한 신규 로직 (+1 검색 및 null -> A301 업데이트) -->
+	<!-- =================================================================== -->
+
+	<!-- +1로 다음 순번의 결재라인 조회 -->
+	<select id="selectNextLineBySeq" resultType="kr.or.ddit.vo.AuthorizationLineVO">
+	  SELECT ATRZ_LINE_SQN, ATRZ_DOC_ID, ATRZ_LINE_SEQ, ATRZ_APPR_USER_ID, ATRZ_APPR_STTS
+	  FROM AUTHORIZATION_LINE
+	  WHERE ATRZ_DOC_ID = #{docId}
+	  AND ATRZ_LINE_SEQ = #{currentSeq} + 1
+	</select>
+
+	<!-- 특정 결재 라인의 상태를 '미열람(A301)'으로 변경 (null일 때만) -->
+	<update id="updateLineStatusToUnread">
+	  UPDATE AUTHORIZATION_LINE
+	  SET ATRZ_APPR_STTS = 'A301'
+	  WHERE ATRZ_DOC_ID = #{docId}
+	  AND ATRZ_LINE_SQN = #{lineSqn}
+	  AND ATRZ_APPR_STTS IS NULL
+	</update>
+	<!-- 미열람(A301) -> 미처리(A302)로 상태 변경 -->
+	<update id="updateLineStatusToUnprocessed">
+	  UPDATE AUTHORIZATION_LINE
+	  SET ATRZ_APPR_STTS = 'A302'
+	  WHERE ATRZ_DOC_ID = #{docId}
+	    AND ATRZ_LINE_SQN = #{lineSqn}
+	    AND ATRZ_APPR_STTS = 'A301'
+	</update>
+</mapper>

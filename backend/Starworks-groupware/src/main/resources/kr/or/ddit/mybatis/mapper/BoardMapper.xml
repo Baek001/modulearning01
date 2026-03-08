@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	홍현택
+ *	2025. 9. 25.		임가영		공지사항과 자유게시판 조회 쿼리 분리 / insert 쿼리 작성
+ *	2025. 9. 26.     	홍현택		페이징 처리 selectList 쿼리 추가
+ *	2025. 9. 26.		임가영		comments -> contents 변경. 단건 select 문에 카테고리 코드 추가 / resultMap 추가
+ *	2025. 9. 27.		임가영		사내 커뮤니티에  ORDER BY 절 추가
+ * 									updateViewCnt(조회수 증가) 쿼리 추가
+ *									selectCommunityList(자유게시판 페이징) 쿼리 추가
+ *	2025. 9. 28.		임가영		communitySearchFrag(자유게시판 검색) 쿼리 추가
+ *	2025. 9. 30.		임가영		updateBoard(게시글 수정) 쿼리에 이미지 동적 수정 쿼리 추가
+ *  2025. 10.02. 		홍현택		공지사항 파일, 공지사항 검색을 위한 쿼리 추가
+ *	2025. 10.17.		홍현택		popularCommunityList(인기글 모아보기) 추가
+ *	2025. 10.24.		홍현택		selectCategoryCounts(카운트)추가
+-->
+
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.BoardMapper">
+	<resultMap type="kr.or.ddit.vo.BoardVO" id="boardMap" autoMapping="true">
+		<association property="users" javaType="kr.or.ddit.vo.UsersVO" autoMapping="true">
+		</association>
+	</resultMap>
+
+	<!-- 조회수 증가 -->
+	<update id="updateViewCnt">
+		UPDATE
+			BOARD
+		SET
+		   VIEW_CNT = VIEW_CNT + 1
+		WHERE
+		   PST_ID = #{pstId}
+	</update>
+
+	<select id="selectNoticeTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		FROM BOARD
+		INNER JOIN USERS ON (BOARD.CRT_USER_ID = USERS.USER_ID)
+		WHERE BBS_CTGR_CD = 'F101'
+		<if test="simpleSearch neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleSearch.searchWord)">
+			AND (
+				<choose>
+					<when test='simpleSearch.searchType eq "title"'>
+						PST_TTL LIKE '%'||#{simpleSearch.searchWord}||'%'
+					</when>
+					<when test='simpleSearch.searchType eq "content"'>
+						CONTENTS LIKE '%'||#{simpleSearch.searchWord}||'%'
+					</when>
+					<when test='simpleSearch.searchType eq "writer"'>
+						USER_NM LIKE '%'||#{simpleSearch.searchWord}||'%'
+					</when>
+					<otherwise>
+						PST_TTL LIKE '%'||#{simpleSearch.searchWord}||'%'
+						OR
+						CONTENTS LIKE '%'||#{simpleSearch.searchWord}||'%'
+						OR
+						USER_NM LIKE '%'||#{simpleSearch.searchWord}||'%'
+					</otherwise>
+				</choose>
+			)
+		</if>
+	</select>
+
+	<select id="selectTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		FROM BOARD
+		WHERE BBS_CTGR_CD = #{detailSearch.bbsCtgrCd}
+	</select>
+<!-- 공지사항 리스트 출력 -->
+	<select id="selectNoticeList" resultType="kr.or.ddit.vo.BoardVO">
+		SELECT B.*
+	FROM (
+	    SELECT ROW_NUMBER() OVER () AS RNUM, A.*
+	    FROM (
+	        SELECT
+	            BOARD.BBS_CTGR_CD
+	            , BOARD.PST_TTL
+	            , BOARD.CONTENTS
+	            , BOARD.VIEW_CNT
+	            , BOARD.CRT_USER_ID
+	            , BOARD.DEL_YN
+	            , BOARD.FRST_CRT_DT
+	            , BOARD.LAST_CHG_DT
+	            , BOARD.LAST_CHG_USER_ID
+	            , BOARD.PST_ID
+	            , BOARD.PST_FILE_ID
+	            , BOARD.FIXED_YN
+	            , USERS.USER_NM AS "users.userNm"
+	        FROM BOARD
+	        INNER JOIN USERS
+	          ON (BOARD.CRT_USER_ID = USERS.USER_ID)
+	        WHERE BOARD.BBS_CTGR_CD = 'F101'
+	          AND BOARD.DEL_YN = 'N'
+			<if test="simpleSearch neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleSearch.searchWord)">
+				AND (
+					<choose>
+						<when test='simpleSearch.searchType eq "title"'>
+							PST_TTL LIKE '%'||#{simpleSearch.searchWord}||'%'
+						</when>
+						<when test='simpleSearch.searchType eq "content"'>
+							CONTENTS LIKE '%'||#{simpleSearch.searchWord}||'%'
+						</when>
+						<when test='simpleSearch.searchType eq "writer"'>
+							USER_NM LIKE '%'||#{simpleSearch.searchWord}||'%'
+						</when>
+						<otherwise>
+							PST_TTL LIKE '%'||#{simpleSearch.searchWord}||'%'
+							OR
+							CONTENTS LIKE '%'||#{simpleSearch.searchWord}||'%'
+							OR
+							USER_NM LIKE '%'||#{simpleSearch.searchWord}||'%'
+						</otherwise>
+					</choose>
+				)
+			</if>
+	        ORDER BY BOARD.FIXED_YN DESC, BOARD.FRST_CRT_DT DESC
+	    ) A
+	) B
+	<![CDATA[
+	WHERE RNUM >= #{startRow}
+	  AND RNUM <= #{endRow}]]>
+
+	</select>
+
+	<select id="selectNoticeListNonPaging" resultType="kr.or.ddit.vo.BoardVO" resultMap="boardMap">
+		SELECT
+		     BOARD.BBS_CTGR_CD
+		    ,BOARD.PST_TTL
+		    ,BOARD.CONTENTS
+		    ,BOARD.VIEW_CNT
+		    ,BOARD.CRT_USER_ID
+		    ,BOARD.DEL_YN
+		    ,BOARD.FRST_CRT_DT
+		    ,BOARD.LAST_CHG_DT
+		    ,BOARD.LAST_CHG_USER_ID
+		    ,BOARD.PST_ID
+		    ,BOARD.PST_FILE_ID
+		    , USERS.USER_NM
+		    , DEPT.DEPT_NM
+		    , JBGD.JBGD_NM
+	 	FROM
+	 		BOARD
+	   LEFT JOIN USERS
+	          ON (BOARD.CRT_USER_ID = USERS.USER_ID)
+	   LEFT JOIN DEPARTMENT DEPT
+	   		ON USERS.DEPT_ID = DEPT.DEPT_ID
+	   LEFT JOIN JOB_GRADE JBGD
+	   		ON USERS.JBGD_CD = JBGD.JBGD_CD
+
+	        WHERE BOARD.BBS_CTGR_CD = 'F101'
+	          AND BOARD.DEL_YN = 'N'
+	   ORDER BY
+			FRST_CRT_DT DESC
+	</select>
+
+	<!-- 자유게시판 검색 sql 조각 -->
+	<sql id="communitySimpleSearchFrag">
+		<where>
+			<if test="paging.simpleSearch neq null">
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(paging.simpleSearch.searchWord)">
+					<choose>
+						<when test='paging.simpleSearch.searchType eq "title"'>
+							PST_TTL LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</when>
+						<when test='paging.simpleSearch.searchType eq "content"'>
+							CONTENTS LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</when>
+						<when test='paging.simpleSearch.searchType eq "writer"'>
+							USER_NM LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</when>
+						<otherwise>
+							PST_TTL LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+							OR
+							CONTENTS LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+							OR
+							USER_NM LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</otherwise>
+					</choose>
+				</if>
+			</if>
+		</where>
+	</sql>
+
+	<!-- 카테고리 별 목록 조회 sql 조각 -->
+	<sql id="communityList">
+		SELECT
+			BBS_CTGR_CD
+			,PST_TTL
+			,CONTENTS
+			,VIEW_CNT
+			,CRT_USER_ID
+			,DEL_YN
+			,FRST_CRT_DT
+			,LAST_CHG_DT
+			,LAST_CHG_USER_ID
+			,PST_ID
+			,PST_FILE_ID
+			, USER_NM
+		FROM BOARD B
+	    LEFT OUTER JOIN USERS U ON B.CRT_USER_ID = U.USER_ID
+	    <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(bbsCtgrCd)">
+			WHERE BBS_CTGR_CD = #{bbsCtgrCd}
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isBlank(bbsCtgrCd)">
+			WHERE BBS_CTGR_CD NOT IN ('F101')
+		</if>
+		AND DEL_YN = 'N'
+	   ORDER BY FRST_CRT_DT DESC
+	</sql>
+
+	<!-- 자유게시판 전체 카운트 -->
+	<select id="selectCommunityTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		  FROM ( <include refid="communityList" /> )
+		  <include refid="communitySimpleSearchFrag" />
+	</select>
+
+	<!-- 자유게시판 목록 조회 (페이징O) -->
+	<select id="selectCommunityList" resultType="kr.or.ddit.vo.BoardVO" resultMap="boardMap">
+		WITH CMV as (
+			SELECT ROW_NUMBER() OVER () AS RNUM, BOARD.*
+			FROM (
+				<include refid="communityList" />
+			) BOARD
+			<include refid="communitySimpleSearchFrag" />
+		)
+		SELECT
+			*
+		FROM
+			CMV
+		WHERE
+			RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+	</select>
+
+	<!-- 인기글 카테고리 별 목록 조회 sql 조각 -->
+	<sql id="popularCommunityList">
+		SELECT
+			BBS_CTGR_CD
+			,PST_TTL
+			,CONTENTS
+			,VIEW_CNT
+			,CRT_USER_ID
+			,DEL_YN
+			,FRST_CRT_DT
+			,LAST_CHG_DT
+			,LAST_CHG_USER_ID
+			,PST_ID
+			,PST_FILE_ID
+			, USER_NM
+		FROM BOARD B
+	    LEFT OUTER JOIN USERS U ON B.CRT_USER_ID = U.USER_ID
+	    <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(bbsCtgrCd)">
+			WHERE BBS_CTGR_CD = #{bbsCtgrCd}
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isBlank(bbsCtgrCd)">
+			WHERE BBS_CTGR_CD NOT IN ('F101')
+		</if>
+		AND DEL_YN = 'N'
+	   ORDER BY VIEW_CNT DESC, FRST_CRT_DT DESC
+	</sql>
+
+	<!-- 인기 커뮤니티 게시물 전체 카운트 -->
+	<select id="selectPopularCommunityTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		  FROM ( <include refid="popularCommunityList" /> )
+		  <include refid="communitySimpleSearchFrag" />
+	</select>
+
+	<!-- 인기 커뮤니티 게시물 목록 조회 (페이징O) -->
+	<select id="selectPopularCommunityList" resultType="kr.or.ddit.vo.BoardVO" resultMap="boardMap">
+		WITH CMV as (
+			SELECT ROW_NUMBER() OVER () AS RNUM, BOARD.*
+			FROM (
+				<include refid="popularCommunityList" />
+			) BOARD
+			<include refid="communitySimpleSearchFrag" />
+		)
+		SELECT
+			*
+		FROM
+			CMV
+		WHERE
+			RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+	</select>
+
+	<!-- 자유게시판 목록조회 (페이징X) -->
+	<select id="selectCommunityListNonPaging" resultType="kr.or.ddit.vo.BoardVO" resultMap="boardMap">
+		<include refid="communityList" />
+	</select>
+
+	<!-- 게시물 단건 조회 -->
+	<select id="selectBoard" resultType="kr.or.ddit.vo.BoardVO" resultMap="boardMap">
+		SELECT
+	   		 PST_TTL
+		   	 ,PST_ID
+		   	 ,CONTENTS
+		   	 ,VIEW_CNT
+		   	 ,BBS_CTGR_CD
+		     ,B.COMMUNITY_ID
+		     ,CRT_USER_ID
+		     ,B.DEL_YN
+		     ,FRST_CRT_DT
+		     ,B.IMPORTANCE_CD
+		     ,B.LINK_URL
+		     ,PST_FILE_ID
+		     ,B.FIXED_YN
+		     ,B.PST_TYPE_CD
+		     ,B.PUBLISHED_DT
+		     ,B.PUBLISH_STATE_CD
+		     ,B.RESERVED_PUBLISH_DT
+		     ,B.VISIBILITY_CD
+		     ,B.COMMUNITY_AUTHOR_ROLE_CD
+		     ,USER_NM
+		     ,C.COMMUNITY_NM
+		     ,C.COMMUNITY_TYPE_CD
+		FROM BOARD B
+		LEFT OUTER JOIN USERS U
+		ON B.CRT_USER_ID = U.USER_ID
+		LEFT OUTER JOIN COMMUNITY C
+		ON B.COMMUNITY_ID = C.COMMUNITY_ID
+		WHERE PST_ID = #{pstId}
+	</select>
+
+	<!-- 게시물 등록 -->
+    <insert id="insertBoard">
+        <selectKey keyProperty="pstId" resultType="String" order="BEFORE">
+            SELECT 'PST' || LPAD(nextval('PST_ID_SEQ')::text, 7, '0')
+        </selectKey>
+        INSERT INTO
+            BOARD (
+                PST_ID
+                , BBS_CTGR_CD
+                , COMMUNITY_ID
+                , CRT_USER_ID
+                , FRST_CRT_DT
+                , IMPORTANCE_CD
+                , LINK_URL
+                , PST_TTL
+                , CONTENTS
+                , PST_FILE_ID
+                , PST_TYPE_CD
+                , PUBLISHED_DT
+                , PUBLISH_STATE_CD
+                , RESERVED_PUBLISH_DT
+                , VISIBILITY_CD
+                , COMMUNITY_AUTHOR_ROLE_CD
+                , FIXED_YN
+            ) VALUES (
+                 #{pstId}
+                 , #{bbsCtgrCd}
+                 , #{communityId}
+                 , #{crtUserId}
+                 , CURRENT_TIMESTAMP
+                 , COALESCE(#{importanceCd}, 'normal')
+                 , #{linkUrl}
+                 , #{pstTtl}
+                 , #{contents}
+                 , #{pstFileId}
+                 , COALESCE(#{pstTypeCd}, 'story')
+                 , CASE
+                    WHEN COALESCE(#{publishStateCd}, 'published') = 'published' THEN CURRENT_TIMESTAMP
+                    ELSE NULL
+                   END
+                 , COALESCE(#{publishStateCd}, 'published')
+                 , #{reservedPublishDt}
+                 , COALESCE(#{visibilityCd}, 'community')
+                 , #{communityAuthorRoleCd}
+                 , #{fixedYn}
+            )
+    </insert>
+
+	<!-- 게시물 수정 -->
+	<update id="updateBoard">
+		UPDATE BOARD
+	SET
+	    PST_TTL = #{pstTtl}
+		  ,CONTENTS =#{contents}
+		  , BBS_CTGR_CD = #{bbsCtgrCd}
+		  , COMMUNITY_ID = #{communityId}
+		  , FIXED_YN = #{fixedYn}
+		  , IMPORTANCE_CD = COALESCE(#{importanceCd}, IMPORTANCE_CD)
+		  , LINK_URL = #{linkUrl}
+		  , PST_TYPE_CD = COALESCE(#{pstTypeCd}, PST_TYPE_CD)
+		  , PUBLISH_STATE_CD = COALESCE(#{publishStateCd}, PUBLISH_STATE_CD)
+		  , RESERVED_PUBLISH_DT = #{reservedPublishDt}
+		  , PUBLISHED_DT = CASE
+		  	WHEN COALESCE(#{publishStateCd}, PUBLISH_STATE_CD) = 'published'
+		  	THEN COALESCE(PUBLISHED_DT, CURRENT_TIMESTAMP)
+		  	ELSE PUBLISHED_DT
+		  END
+		  , VISIBILITY_CD = COALESCE(#{visibilityCd}, VISIBILITY_CD)
+		  , COMMUNITY_AUTHOR_ROLE_CD = #{communityAuthorRoleCd}
+          , LAST_CHG_DT = CURRENT_TIMESTAMP
+          , LAST_CHG_USER_ID = #{lastChgUserId}
+		  <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(pstFileId)">
+		  , PST_FILE_ID = #{pstFileId}
+		  </if>
+	WHERE
+		PST_ID = #{pstId}
+
+	</update>
+
+	<!-- 게시물 삭제 -->
+	<update id="deleteBoard">
+		UPDATE
+			BOARD
+		SET
+			DEL_YN = 'Y'
+		WHERE
+			PST_ID = #{pstId}
+	</update>
+
+	<select id="selectNotices" resultType="kr.or.ddit.vo.BoardVO">
+		SELECT
+			B.PST_ID,
+			B.PST_TTL,
+			B.CRT_USER_ID,
+			U.USER_NM AS USER_NM,
+			J.JBGD_NM AS JBGD_NM,
+			D.DEPT_NM AS DEPT_NM,
+			B.FRST_CRT_DT,
+			B.VIEW_CNT
+		FROM BOARD B
+			LEFT JOIN USERS U ON B.CRT_USER_ID = U.USER_ID
+			LEFT JOIN JOB_GRADE J ON U.JBGD_CD = J.JBGD_CD
+			LEFT JOIN DEPARTMENT D ON U.DEPT_ID = D.DEPT_ID
+		WHERE B.BBS_CTGR_CD = 'F101'
+		  AND COALESCE(B.DEL_YN, 'N') = 'N'
+		ORDER BY B.FRST_CRT_DT DESC
+		FETCH FIRST 5 ROWS ONLY
+	</select>
+
+
+	<!-- 커뮤니티 카테고리별 게시물 수 조회 -->
+    <select id="selectCategoryCounts" resultType="Map">
+        SELECT
+            BBS_CTGR_CD as "category",
+            COUNT(*) as "count"
+        FROM
+            BOARD
+        WHERE
+            BBS_CTGR_CD LIKE 'F1%' AND BBS_CTGR_CD != 'F101' AND DEL_YN = 'N'
+        GROUP BY
+            BBS_CTGR_CD
+    </select>
+
+</mapper>

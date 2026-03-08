@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 21.     	홍현택            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.OtpMapper">
+
+    <!-- 사용자의 OTP 비밀 키를 업데이트 -->
+    <update id="updateUserOtpSecret" parameterType="kr.or.ddit.vo.UsersVO">
+        UPDATE USERS
+        SET
+            USER_OTP_SECRET = #{userOtpSecret}
+        WHERE
+            USER_ID = #{userId}
+    </update>
+
+    <!-- 사용자의 OTP 비밀 키를 조회 -->
+    <select id="selectUserOtpSecret" parameterType="string" resultType="string">
+        SELECT USER_OTP_SECRET
+        FROM USERS
+        WHERE USER_ID = #{userId}
+    </select>
+
+</mapper>

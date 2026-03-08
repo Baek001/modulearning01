@@ -1,0 +1,15 @@
+﻿{
+  "bizNm": "integration-check",
+  "bizTypeCd": "B201",
+  "bizSttsCd": "B301",
+  "bizGoal": "project calendar integration verification",
+  "bizDetail": "react and spring api verification",
+  "bizScope": "frontend backend db",
+  "bizBdgt": 5000000,
+  "bizPrgrs": 0,
+  "strtBizDt": "2026-03-06T09:00",
+  "endBizDt": "2026-03-31T18:00",
+  "members": [
+    { "bizUserId": "user01", "bizAuthCd": "B102" }
+  ]
+}

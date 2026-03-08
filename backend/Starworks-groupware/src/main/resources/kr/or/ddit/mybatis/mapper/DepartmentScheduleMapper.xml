@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.DepartmentScheduleMapper">
+
+	<select id="selectDepartmentScheduleList" resultType="kr.or.ddit.vo.DepartmentScheduleVO">
+		SELECT 
+			DEPT_SCHD_ID
+			, DEPT_ID	
+			, SCHD_STRT_DT
+			, SCHD_END_DT
+			, DEPT_SCHD_CRT_USER_ID
+			, SCHD_TTL
+			, ALLDAY
+			, DEPT_SCHD_EXPLN
+			, DEL_YN
+		FROM 
+			DEPARTMENT_SCHEDULE
+	</select>
+	<select id="selectDepartmentScheduleListByDeptId" resultType="kr.or.ddit.vo.DepartmentScheduleVO">
+		SELECT
+			DEPT_SCHD_ID
+			, DEPT_ID
+			, SCHD_STRT_DT
+			, SCHD_END_DT
+			, DEPT_SCHD_CRT_USER_ID
+			, SCHD_TTL
+			, ALLDAY
+			, DEPT_SCHD_EXPLN
+			, DEL_YN
+		FROM DEPARTMENT_SCHEDULE
+		WHERE DEPT_ID = #{deptId}
+		  AND COALESCE(DEL_YN, 'N') = 'N'
+		ORDER BY SCHD_STRT_DT ASC, DEPT_SCHD_ID ASC
+	</select>
+	<select id="selectDepartmentSchedule" resultType="kr.or.ddit.vo.DepartmentScheduleVO">
+		SELECT 
+			DEPT_SCHD_ID
+			, DEPT_ID	
+			, SCHD_STRT_DT
+			, SCHD_END_DT
+			, DEPT_SCHD_CRT_USER_ID
+			, SCHD_TTL
+			, ALLDAY
+			, DEPT_SCHD_EXPLN
+			, DEL_YN
+		FROM 
+			DEPARTMENT_SCHEDULE
+		WHERE 
+			DEPT_SCHD_ID = #{deptSchdId}
+	</select>
+	<insert id="insertDepartmentSchedule">
+		<selectKey order="BEFORE" resultType="String" keyProperty="deptSchdId">
+		 	SELECT  'DPSD' || LPAD(nextval('DEPT_SCHD_ID_SEQ')::text, 12, '0')
+		</selectKey>
+		INSERT INTO DEPARTMENT_SCHEDULE(
+			DEPT_SCHD_ID
+			, DEPT_ID	
+			, SCHD_STRT_DT
+			, SCHD_END_DT
+			, DEPT_SCHD_CRT_USER_ID
+			, SCHD_TTL
+			, ALLDAY
+			, DEPT_SCHD_EXPLN			
+		) VALUES (
+			#{deptSchdId}
+			, #{deptId}
+			, #{schdStrtDt}
+			, #{schdEndDt}
+			, #{deptSchdCrtUserId}
+			, #{schdTtl}
+			, #{allday}
+			, #{deptSchdExpln}
+		)
+	</insert>
+	<update id="updateDepartmentSchedule">
+		UPDATE DEPARTMENT_SCHEDULE
+		SET 
+			SCHD_TTL = #{schdTtl}
+			, SCHD_STRT_DT = #{schdStrtDt}
+			, SCHD_END_DT = #{schdEndDt}
+			, ALLDAY = #{allday}
+			, DEPT_SCHD_EXPLN = #{deptSchdExpln}
+			, DEL_YN = #{delYn}
+		WHERE 
+			DEPT_SCHD_ID = #{deptSchdId}
+	</update>
+	<update id="softDeleteDepartmentSchedule">
+		UPDATE DEPARTMENT_SCHEDULE
+		SET DEL_YN = 'Y'
+		WHERE DEPT_SCHD_ID = #{deptSchdId}
+	</update>
+</mapper>

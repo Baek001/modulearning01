@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.CustomLineBookmarkMapper">
+    <insert id="insertCustomLineBookmark">
+        <selectKey resultType="string" keyProperty="cstmLineBmSqn" order="BEFORE">
+            SELECT nextval('CSTM_LINE_BM_SQN_SEQ')::text
+        </selectKey>
+        INSERT INTO CUSTOM_LINE_BOOKMARK(
+            CSTM_LINE_BM_SQN,
+            USER_ID,
+            CSTM_LINE_BM_NM,
+            ATRZ_LINE_SEQ,
+            ATRZ_APPR_ID,
+            APPR_ATRZ_YN
+        ) VALUES (
+            #{cstmLineBmSqn},
+            #{userId},
+            #{cstmLineBmNm},
+            #{atrzLineSeq},
+            #{atrzApprId},
+            #{apprAtrzYn}
+        )
+    </insert>
+
+    <select id="selectCustomLineBookmarkList" resultType="kr.or.ddit.vo.CustomLineBookmarkVO">
+        SELECT
+            b.CSTM_LINE_BM_SQN,
+            b.USER_ID,
+            b.CSTM_LINE_BM_NM,
+            b.ATRZ_LINE_SEQ,
+            b.ATRZ_APPR_ID,
+            b.APPR_ATRZ_YN,
+            u.USER_NM AS userNm,
+            d.DEPT_NM AS deptNm,
+            j.JBGD_NM AS jbgdNm,
+            f.FILE_PATH
+        FROM CUSTOM_LINE_BOOKMARK b
+        JOIN USERS u
+          ON b.ATRZ_APPR_ID = u.USER_ID
+        LEFT JOIN DEPARTMENT d
+          ON u.DEPT_ID = d.DEPT_ID
+        LEFT JOIN JOB_GRADE j
+          ON u.JBGD_CD = j.JBGD_CD
+        LEFT JOIN FILE_DETAIL f
+          ON u.USER_IMG_FILE_ID = f.FILE_ID
+        WHERE b.USER_ID = #{userId}
+        ORDER BY b.CSTM_LINE_BM_NM, b.ATRZ_LINE_SEQ
+    </select>
+
+    <delete id="deleteCustomLineBookmark">
+        DELETE FROM CUSTOM_LINE_BOOKMARK
+        WHERE USER_ID = #{userId}
+          AND CSTM_LINE_BM_NM = #{cstmLineBmNm}
+    </delete>
+</mapper>

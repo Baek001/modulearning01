@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	임가영           최초 생성
+ *	2025. 10.12.		윤서현		   결재완료 코드추가
+ *  2025. 10.12.  		윤서현		   신제품 기안서 목록 조회
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.NewMenuAtrzMapper">
+
+<select id="selectTotalRecord" resultType="int">
+	SELECT
+		COUNT(*)
+	  FROM
+	  	NEW_MENU_ATRZ
+</select>
+
+<select id="selectNewMenuAtrzList" resultType="kr.or.ddit.vo.NewMenuAtrzVO">
+	WITH NMV AS (
+		SELECT
+            ROW_NUMBER() OVER () AS RNUM,
+            N.NWMN_SQN,
+            N.ATRZ_DOC_ID,
+            N.MENU_NM,
+            N.CATEGORY_NM,
+            N.RELEASE_YMD,
+            N.STANDARD_CD,
+            N.PRICE_AMT,
+            N.COST_RATIO_AMT,
+            N.INGREDIENT_CONTENT,
+            N.MARKETING_CONTENT,
+            N.MENU_FILE_ID,
+            D.ATRZ_USER_ID,
+            U.USER_NM
+        FROM
+            NEW_MENU_ATRZ N
+            JOIN AUTHORIZATION_DOCUMENT D
+                ON N.ATRZ_DOC_ID = D.ATRZ_DOC_ID
+            JOIN USERS U
+                ON D.ATRZ_USER_ID = U.USER_ID
+        WHERE
+            D.CRNT_ATRZ_STEP_CD = 'A206'
+        ORDER BY
+            N.NWMN_SQN DESC
+	)
+	SELECT
+		*
+	  FROM
+	  	NMV
+	 WHERE
+	  	RNUM BETWEEN #{startRow} AND #{endRow}
+</select>
+
+<select id="selectNewMenuAtrzListNonPaging" resultType="kr.or.ddit.vo.NewMenuAtrzVO">
+	SELECT
+		N.NWMN_SQN,
+		N.ATRZ_DOC_ID,
+		N.MENU_NM,
+		N.CATEGORY_NM,
+		N.RELEASE_YMD,
+		N.STANDARD_CD,
+		N.PRICE_AMT,
+		N.COST_RATIO_AMT,
+		N.INGREDIENT_CONTENT,
+		N.MARKETING_CONTENT,
+		N.MENU_FILE_ID,
+		D.ATRZ_USER_ID,
+		U.USER_NM
+	FROM
+		NEW_MENU_ATRZ N
+		JOIN AUTHORIZATION_DOCUMENT D ON N.ATRZ_DOC_ID = D.ATRZ_DOC_ID
+		JOIN USERS U ON D.ATRZ_USER_ID = U.USER_ID
+	WHERE
+		D.CRNT_ATRZ_STEP_CD = 'A206'
+	ORDER BY
+		N.NWMN_SQN DESC
+</select>
+
+<select id="selectNewMenuAtrz" resultType="kr.or.ddit.vo.NewMenuAtrzVO">
+	SELECT
+		N.NWMN_SQN,
+		N.ATRZ_DOC_ID,
+		N.MENU_NM,
+		N.CATEGORY_NM,
+		N.RELEASE_YMD,
+		N.STANDARD_CD,
+		N.PRICE_AMT,
+		N.COST_RATIO_AMT,
+		N.INGREDIENT_CONTENT,
+		N.MARKETING_CONTENT,
+		N.MENU_FILE_ID,
+		D.ATRZ_USER_ID,
+		U.USER_NM
+	FROM
+		NEW_MENU_ATRZ N
+		JOIN AUTHORIZATION_DOCUMENT D ON N.ATRZ_DOC_ID = D.ATRZ_DOC_ID
+		JOIN USERS U ON D.ATRZ_USER_ID = U.USER_ID
+	WHERE
+		N.NWMN_SQN = #{nwmnSqn}
+</select>
+
+<insert id="insertNewMenuAtrz">
+	<selectKey order="BEFORE" resultType="int" keyProperty="nwmnSqn">
+		select nextval('NWMN_SQN_SEQ')
+	</selectKey>
+	INSERT INTO
+		NEW_MENU_ATRZ (
+			NWMN_SQN
+			, ATRZ_DOC_ID
+			, MENU_NM
+			, CATEGORY_NM
+			, RELEASE_YMD
+			, STANDARD_CD
+			, PRICE_AMT
+			, COST_RATIO_AMT
+			, INGREDIENT_CONTENT
+			, MARKETING_CONTENT
+			, MENU_FILE_ID
+		) VALUES (
+			#{nwmnSqn}
+			, #{atrzDocId}
+			, #{menuNm}
+			, #{categoryNm}
+			, #{releaseYmd}
+			, #{standardCd}
+			, #{priceAmt}
+			, #{costRatioAmt}
+			, #{ingredientContent}
+			, #{marketingContent}
+			, #{menuFileId}
+	)
+</insert>
+
+</mapper>

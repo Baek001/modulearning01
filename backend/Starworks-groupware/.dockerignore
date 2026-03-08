@@ -1,0 +1,7 @@
+﻿target
+.git
+.idea
+.vscode
+logs
+migration-logs
+node_modules

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *  2025. 9. 26.     	장어진            INSERT SQL 변경
+ *  2025.10.  6.     	장어진            BoardComment 참고해서 SQL 추가/수정
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.ProjectBoardCommentMapper">
+		
+	<resultMap type="kr.or.ddit.vo.ProjectBoardCommentVO" id="ProjectBoardCommentMap" autoMapping="true">
+		<association property="users" javaType="kr.or.ddit.vo.UsersVO" autoMapping="true"></association>
+	</resultMap>
+	
+	<select id="selectProjectBoardCommentTotalCount" resultType="int">
+		SELECT 
+			COUNT(*)
+		FROM 
+			PROJECT_BOARD_COMMENT
+		WHERE 
+			BIZ_PST_ID = #{bizPstId}
+		AND
+			DEL_YN = 'N'		
+	</select>
+	
+	<select id="selectProjectBoardCommentList" resultMap="ProjectBoardCommentMap">
+		SELECT 
+			PBC.BIZ_CMNT_ID
+			, PBC.BIZ_PST_ID
+			, PBC.UP_BIZ_CMNT_ID
+			, PBC.CRT_USER_ID
+			, PBC.CONTENTS
+			, PBC.DEL_YN
+			, PBC.FRST_CRT_DT
+			, PBC.LAST_CHG_USER_ID
+			, PBC.LAST_CHG_DT
+			, U.USER_NM
+		FROM 
+			PROJECT_BOARD_COMMENT PBC
+				INNER JOIN USERS U ON PBC.CRT_USER_ID = U.USER_ID 
+		WHERE 
+			PBC.BIZ_PST_ID = #{bizPstId}	
+		ORDER BY
+			PBC.FRST_CRT_DT			
+	</select>
+	
+	<select id="selectProjectBoardReplyDetail" resultMap="ProjectBoardCommentMap">
+		SELECT 
+			PBC.BIZ_CMNT_ID
+			, PBC.BIZ_PST_ID
+			, PBC.UP_BIZ_CMNT_ID
+			, PBC.CRT_USER_ID
+			, PBC.CONTENTS
+			, PBC.DEL_YN
+			, PBC.FRST_CRT_DT
+			, PBC.LAST_CHG_USER_ID
+			, PBC.LAST_CHG_DT
+			, U.USER_NM
+		FROM 
+			PROJECT_BOARD_COMMENT PBC
+				INNER JOIN USERS U ON PBC.CRT_USER_ID = U.USER_ID 
+		WHERE 	
+			BIZ_CMNT_ID = (
+						SELECT 
+							MAX(BIZ_CMNT_ID)
+                        FROM 
+                            (
+                            SELECT 
+                                BIZ_PST_ID
+                                , BIZ_CMNT_ID
+                                , UP_BIZ_CMNT_ID
+                            FROM 
+                            	PROJECT_BOARD_COMMENT
+                            )
+                        WHERE 
+                        	BIZ_PST_ID = #{bizPstId}
+                        AND 
+                        	UP_BIZ_CMNT_ID = #{upBizPstId}
+                        )			
+	</select>
+	
+	<select id="selectProjectBoardComment" resultMap="ProjectBoardCommentMap">
+		SELECT 
+			PBC.BIZ_CMNT_ID
+			, PBC.BIZ_PST_ID
+			, PBC.UP_BIZ_CMNT_ID
+			, PBC.CRT_USER_ID
+			, PBC.CONTENTS
+			, PBC.DEL_YN
+			, PBC.FRST_CRT_DT
+			, PBC.LAST_CHG_USER_ID
+			, PBC.LAST_CHG_DT
+			, U.USER_NM			
+		FROM 
+			PROJECT_BOARD_COMMENT PBC
+				INNER JOIN USERS U ON PBC.CRT_USER_ID = U.USER_ID 
+		WHERE 
+			PBC.BIZ_CMNT_ID = #{bizCmntId}
+	</select>
+	
+	<insert id="insertProjectBoardComment">
+		<selectKey order="BEFORE" resultType="String" keyProperty="bizCmntId">
+			<![CDATA[
+			SELECT (
+			    SELECT T1.biz_pst_id FROM project_board T1 WHERE T1.biz_pst_id = #{bizPstId}
+			) || LPAD(COALESCE(SUBSTR(T2.biz_cmnt_id_max, -6) + 1, 1), 6, '0') AS biz_cmnt_id
+			FROM (
+			    SELECT MAX(biz_cmnt_id) AS biz_cmnt_id_max
+			    FROM project_board_comment
+			    WHERE biz_cmnt_id >= (SELECT biz_pst_id FROM project_board WHERE biz_pst_id = #{bizPstId}) || '000000'
+			      AND biz_cmnt_id < (SELECT biz_pst_id FROM project_board WHERE biz_pst_id = #{bizPstId}) || '999999'
+			) T2
+			]]>
+		</selectKey>
+		INSERT INTO PROJECT_BOARD_COMMENT (
+			BIZ_CMNT_ID
+			, BIZ_PST_ID
+			, UP_BIZ_CMNT_ID
+			, CRT_USER_ID
+			, CONTENTS
+			, FRST_CRT_DT
+		) VALUES (
+			#{bizCmntId}
+			, #{bizPstId}
+			, #{upBizCmntId}
+			, #{crtUserId}
+			, #{contents}
+			, CURRENT_TIMESTAMP
+		)
+	</insert>
+	<update id="updateProjectBoardComment">
+		UPDATE 
+			PROJECT_BOARD_COMMENT
+		SET 
+			CONTENTS = #{contents}
+			, LAST_CHG_USER_ID = #{lastChgUserId}
+			, LAST_CHG_DT = CURRENT_TIMESTAMP
+		WHERE
+			BIZ_CMNT_ID = #{bizCmntId}
+	</update>
+	
+	<update id="deleteProjectBoardComment">
+		UPDATE
+			PROJECT_BOARD_COMMENT
+		SET
+			DEL_YN = 'Y'
+		WHERE
+			BIZ_CMNT_ID = #{bizCmntId}
+	</update>
+</mapper>

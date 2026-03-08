@@ -1,0 +1,349 @@
+/* ═══ Phase 6: Community UI Redesign ═══ */
+
+/* 1. Left Sidebar Navigation Compression */
+.community-rail {
+    flex: 0 0 260px;
+    position: sticky;
+    top: calc(var(--header-height) + var(--spacing-lg));
+    max-height: calc(100vh - var(--header-height) - var(--spacing-lg) * 2);
+    overflow-y: auto;
+}
+
+.community-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.community-nav-item {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    text-align: left;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.community-nav-item:hover {
+    background: var(--bg-hover);
+}
+
+.community-nav-item.active {
+    background: var(--bg-active);
+    border-color: var(--border-color);
+}
+
+.community-nav-item strong {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.community-nav-item span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.community-nav-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+/* 2. Top Hero Compact */
+.community-hero-compact {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.community-hero-compact .community-cover-thumbnail {
+    flex: 0 0 80px;
+    height: 80px;
+    border-radius: var(--radius-md);
+    background: var(--bg-muted);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+}
+
+.community-hero-compact .community-cover-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.community-hero-compact .community-hero-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.community-hero-compact h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.community-hero-compact p {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.community-action-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+/* 3. Activity Feed Promotion */
+.community-activity-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.community-feed-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.community-feed-item:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.community-feed-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.community-feed-item-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.community-feed-item strong {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.community-feed-item p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.community-feed-item-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-left: 16px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 80px;
+    text-align: right;
+}
+
+/* 4. Admin Panel Cleanup */
+.community-admin-panel .card-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-muted);
+}
+
+.community-admin-panel .card-header h3 {
+    font-size: 0.9rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.community-admin-panel .card-body {
+    padding: 12px 16px;
+}
+
+.community-side-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.community-side-list>div {
+    display: flex;
+    justify-content: space-between;
+}
+
+.community-side-list strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.community-admin-panel .community-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.community-member-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+
+.community-member-item.operator {
+    border-color: var(--primary-light);
+    background: rgba(var(--primary-rgb), 0.05);
+}
+
+.community-member-item.operator strong {
+    color: var(--primary);
+}
+
+.community-member-item>div:first-child {
+    display: flex;
+    flex-direction: column;
+}
+
+.community-member-item strong {
+    font-size: 0.85rem;
+}
+
+.community-member-item span {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.community-member-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.community-member-actions select {
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    height: 24px;
+}
+
+.community-member-actions button {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    height: 24px;
+}
+
+/* 5. Sectioned Modal */
+.community-modal-shell {
+    max-width: 800px;
+    width: 100%;
+    padding: 0;
+}
+
+.community-modal-shell .modal-body {
+    padding: 0 !important;
+}
+
+.community-modal-section {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.community-modal-section:last-child {
+    border-bottom: none;
+}
+
+.community-modal-section-header {
+    margin-bottom: var(--spacing-md);
+}
+
+.community-modal-section-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.community-modal-section-header p {
+    margin: 4px 0 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.community-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+.form-span-2 {
+    grid-column: span 2;
+}
+
+/* Empty State Actions */
+.community-empty-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    background: var(--bg-muted);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.community-empty-action .empty-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+}
+
+.community-empty-action h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.community-empty-action p {
+    margin: 0 0 16px 0;
+    font-size: 0.9rem;
+}

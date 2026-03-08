@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	윤서현            최초 생성
+ 	2025. 9. 27			홍현택			로그인 selectUser 쿼리 수정..
+ 	2025. 10. 15.		임가영			selectUser 쿼리에 사용자 프로필 사진 uri 가져오는 쿼리 추가
+ *  2025.10. 15.     	장어진	        Working Status 테이블 기능을 Users 테이블로 옮김.
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.UsersMapper">
+
+	<insert id="insertUser">
+		INSERT INTO USERS(
+			USER_ID
+			, USER_PSWD
+			, USER_NM
+			, USER_EMAIL
+			, USER_TELNO
+			, EXT_TEL
+			, RSGNTN_YN
+			, RSGNTN_YMD
+			, DEPT_ID
+			, JBGD_CD
+			, USER_IMG_FILE_ID
+			, USER_ROLE
+			, HIRE_YMD
+			, WORK_STTS_CD
+		)VALUES(
+			 #{userId}
+			 ,#{userPswd}
+			 ,#{userNm}
+			 ,#{userEmail}
+			 ,#{userTelno}
+			 ,#{extTel}
+			 ,'N'
+			 ,#{rsgntnYmd}
+			 ,#{deptId}
+			 ,#{jbgdCd}
+			 ,#{userImgFileId}
+			 ,'ROLE_USER'
+			 ,#{hireYmd}
+			 ,'C103'
+			)
+	</insert>
+
+	<select id="selectUserList" resultType="kr.or.ddit.vo.UsersVO">
+			SELECT
+			    a.*
+			    , b.user_id
+			    , b.user_nm
+			    , b.user_email
+			    , b.user_telno
+			    , b.user_img_file_id
+			    , b.hire_ymd
+			    , b.work_stts_cd
+			    , b.rsgntn_yn
+			    , b.rsgntn_ymd
+			    , b.ext_tel
+			    , c.code_nm
+			    , d.jbgd_nm
+			    , f.file_path
+			FROM
+			    (
+			    	WITH RECURSIVE DEPT_TREE AS (
+			    		SELECT
+			    			DEPT_NM
+			    			, USE_YN
+			    			, DEPT_ID
+			    			, UP_DEPT_ID
+			    			, SORT_NUM
+			    			, 1 AS LEVEL
+			    			, DEPT_NM::text AS "PATH"
+			    			, LPAD(COALESCE(SORT_NUM, 0)::text, 10, '0') AS ORDER_PATH
+			    		FROM DEPARTMENT
+			    		WHERE USE_YN = 'Y'
+			    		AND UP_DEPT_ID IS NULL
+			    		UNION ALL
+			    		SELECT
+			    			D.DEPT_NM
+			    			, D.USE_YN
+			    			, D.DEPT_ID
+			    			, D.UP_DEPT_ID
+			    			, D.SORT_NUM
+			    			, DT.LEVEL + 1 AS LEVEL
+			    			, (DT."PATH" || ' -> ' || D.DEPT_NM)::text AS "PATH"
+			    			, (DT.ORDER_PATH || '.' || LPAD(COALESCE(D.SORT_NUM, 0)::text, 10, '0')) AS ORDER_PATH
+			    		FROM DEPARTMENT D
+			    		JOIN DEPT_TREE DT ON D.UP_DEPT_ID = DT.DEPT_ID
+			    		WHERE D.USE_YN = 'Y'
+			    	)
+			    	SELECT
+			    		DEPT_NM
+			    		, USE_YN
+			    		, DEPT_ID
+			    		, UP_DEPT_ID
+			    		, SORT_NUM
+			    		, LEVEL
+			    		, "PATH"
+			    		, ORDER_PATH
+			    	FROM DEPT_TREE
+			    ) a
+			INNER JOIN USERS b
+			ON
+			    a.DEPT_ID = b.DEPT_ID
+			AND b.RSGNTN_YN = 'N'
+			LEFT OUTER JOIN common_code c
+			ON
+			    b.work_stts_cd = c.code_id
+			LEFT OUTER JOIN job_grade d
+			ON
+			    b.jbgd_cd = d.jbgd_cd
+			LEFT OUTER JOIN file_detail f
+			ON B.USER_IMG_FILE_ID = F.FILE_ID
+			ORDER BY a.ORDER_PATH, b.JBGD_CD ASC, b.USER_NM ASC
+
+<!-- 		SELECT -->
+<!-- 			U.USER_ID -->
+<!-- 			, U.USER_PSWD -->
+<!-- 			, U.USER_NM -->
+<!-- 			, U.USER_EMAIL -->
+<!-- 			, U.USER_TELNO  -->
+<!-- 			, U.EXT_TEL -->
+<!-- 			, U.RSGNTN_YN -->
+<!-- 			, U.RSGNTN_YMD -->
+<!-- 			, U.DEPT_ID -->
+<!-- 			, U.JBGD_CD -->
+<!-- 			, U.USER_IMG_FILE_ID -->
+<!-- 			, U.USER_ROLE -->
+<!-- 			, U.HIRE_YMD -->
+<!-- 			, D.DEPT_NM  -->
+<!-- 			, J.JBGD_NM  -->
+<!-- 			, W.WORK_STTS_CD AS workSttsCd -->
+<!-- 			, C.CODE_NM -->
+<!-- 		FROM USERS U -->
+<!-- 			LEFT JOIN DEPARTMENT D ON U.DEPT_ID=D.DEPT_ID -->
+<!-- 			LEFT JOIN JOB_GRADE J ON U.JBGD_CD=J.JBGD_CD -->
+<!-- 			LEFT JOIN WORKING_STATUS W ON U.USER_ID=W.USER_ID		 -->
+<!-- 			LEFT JOIN COMMON_CODE C ON W.WORK_STTS_CD=C.CODE_ID	 -->
+	</select>
+
+	<select id="selectUser" resultType="kr.or.ddit.vo.UsersVO">
+	   SELECT
+	        U.USER_ID
+	      , U.USER_PSWD
+	      , U.USER_NM
+	      , U.USER_EMAIL
+	      , U.USER_TELNO
+	      , U.EXT_TEL
+	      , U.RSGNTN_YN
+	      , U.RSGNTN_YMD
+	      , U.DEPT_ID
+	      , U.JBGD_CD
+	      , U.USER_IMG_FILE_ID
+	      , U.USER_ROLE
+	      , U.HIRE_YMD
+	      , U.WORK_STTS_CD
+
+	      , J.JBGD_NM  AS jbgdNm
+	      , D.DEPT_NM  AS deptNm
+	      , C.CODE_NM    AS workSttsNm
+	      , D.UP_DEPT_ID
+
+	      , FD.FILE_PATH
+	  FROM USERS U
+	  LEFT JOIN JOB_GRADE J
+	         ON U.JBGD_CD = J.JBGD_CD
+	  LEFT JOIN DEPARTMENT D
+	         ON U.DEPT_ID = D.DEPT_ID
+	  LEFT JOIN COMMON_CODE C
+	         ON C.CODE_ID = U.WORK_STTS_CD
+	  LEFT JOIN FILE_DETAIL FD
+	  		ON U.USER_IMG_FILE_ID = FD.FILE_ID
+
+	  WHERE U.USER_ID = #{userId}
+	</select>
+
+
+	<update id="updateUser">
+		UPDATE USERS
+		SET
+			USER_PSWD = #{userPswd}
+			,USER_NM = #{userNm}
+			,USER_EMAIL	= #{userEmail}
+			,USER_TELNO	= #{userTelno}
+			,EXT_TEL = #{extTel}
+			,DEPT_ID = #{deptId}
+			,JBGD_CD = #{jbgdCd}
+			<!-- ,USER_IMG_FILE_ID = #{userImgFileId} -->
+			<!-- ,USER_ROLE = 'ROLE_USER' -->
+		WHERE USER_ID = #{userId}
+	</update>
+
+	<!-- 퇴사처리 -->
+	<update id="retireUser">
+		UPDATE USERS
+		SET
+			RSGNTN_YN = 'Y'
+			,RSGNTN_YMD = CURRENT_TIMESTAMP
+		WHERE USER_ID = #{userId}
+	</update>
+
+	<!-- 검색 -->
+	<select id="selectUsersByTerm" resultType="kr.or.ddit.vo.UsersVO">
+		SELECT
+			U.USER_ID
+			, U.USER_NM
+			, U.USER_EMAIL
+			, U.USER_TELNO
+			, U.EXT_TEL
+			, U.HIRE_YMD
+			, J.JBGD_NM
+			, COALESCE(U.RSGNTN_YN, 'N') AS RSGNTN_YN
+			, D.DEPT_ID
+			, D.DEPT_NM AS deptNm
+			, FD.FILE_PATH
+		FROM
+			USERS U
+		LEFT JOIN DEPARTMENT D ON U.DEPT_ID = D.DEPT_ID
+		LEFT JOIN JOB_GRADE J ON U.JBGD_CD = J.JBGD_CD
+		LEFT JOIN FILE_DETAIL FD ON U.USER_IMG_FILE_ID = FD.FILE_ID
+		WHERE
+			U.RSGNTN_YN = 'N'
+			AND (
+				UPPER(U.USER_NM) LIKE '%' || UPPER(#{term}) || '%'
+				OR UPPER(D.DEPT_NM) LIKE '%' || UPPER(#{term}) || '%'
+				OR UPPER(U.USER_ID) LIKE '%' || UPPER(#{term}) || '%'
+				OR UPPER(U.USER_EMAIL) LIKE '%' || UPPER(#{term}) || '%'
+				OR UPPER(U.USER_TELNO) LIKE '%' || UPPER(#{term}) || '%'
+			)
+			AND COALESCE(U.RSGNTN_YN, 'N') = 'N' <!-- 재직자만 -->
+		ORDER BY
+			U.USER_NM
+	</select>
+
+	<!-- 퇴사자 목록 -->
+	<select id="selectResignedUserList">
+		SELECT
+	        U.USER_ID,
+	        U.USER_NM,
+	        D.DEPT_NM AS deptNm,
+	        J.JBGD_NM AS jbgdNm,
+	        U.USER_EMAIL,
+	        U.USER_TELNO,
+	        U.RSGNTN_YN,
+	        U.RSGNTN_YMD,
+	        C.CODE_NM AS workSttsNm
+	    FROM USERS U
+	    LEFT JOIN DEPARTMENT D ON U.DEPT_ID = D.DEPT_ID
+	    LEFT JOIN JOB_GRADE J ON U.JBGD_CD = J.JBGD_CD
+	    LEFT JOIN COMMON_CODE C ON U.WORK_STTS_CD = C.CODE_ID
+	    WHERE U.RSGNTN_YN = 'Y'
+	    ORDER BY U.RSGNTN_YMD DESC
+	</select>
+
+	<select id="selectWorkStts" resultType="kr.or.ddit.vo.UsersVO">
+		SELECT
+			USER_ID
+			, USER_NM
+			, WORK_STTS_CD
+		FROM
+			USERS
+		WHERE
+			USER_ID = #{userId}
+	</select>
+
+	<update id="updateWorkStts">
+		UPDATE USERS
+		SET
+			WORK_STTS_CD = #{workSttsCd}
+		WHERE
+			USER_ID = #{userId}
+	</update>
+
+	<!-- 부서/직급 변경 감지를 위한 기존 사용자 정보 조회 -->
+	<select id="selectUserById" parameterType="string" resultType="kr.or.ddit.vo.UsersVO">
+	    SELECT
+	        USER_ID,
+	        DEPT_ID,
+	        JBGD_CD
+	    FROM
+	        USERS
+	    WHERE
+	        USER_ID = #{userId}
+	</select>
+
+	<!-- 부서별 구성원 조회 (** 가영 추가) -->
+	<select id="selectUsersByDept" resultType="kr.or.ddit.vo.UsersVO">
+		SELECT
+		    U.USER_ID
+		    , U.USER_NM
+		    , U.RSGNTN_YN
+		    , U.DEPT_ID
+		    , U.JBGD_CD
+		    , U.WORK_STTS_CD
+		FROM
+		    USERS U
+		INNER JOIN
+		 (
+		 	WITH RECURSIVE DEPT_TREE AS (
+		 		SELECT DEPT_ID, UP_DEPT_ID
+		 		FROM DEPARTMENT
+		 		WHERE DEPT_ID = #{deptId}
+		 		UNION ALL
+		 		SELECT D.DEPT_ID, D.UP_DEPT_ID
+		 		FROM DEPARTMENT D
+		 		JOIN DEPT_TREE DT ON D.UP_DEPT_ID = DT.DEPT_ID
+		 	)
+		    SELECT DEPT_ID
+		    FROM DEPT_TREE
+		) D
+		ON U.DEPT_ID = D.DEPT_ID
+
+		WHERE RSGNTN_YN = 'N'
+	</select>
+
+	<select id="selectUserForCertificate" parameterType="string">
+		SELECT
+			U.USER_ID
+			, U.USER_PSWD
+			, U.USER_NM
+			, U.USER_EMAIL
+			, U.USER_TELNO
+			, U.EXT_TEL
+			, U.RSGNTN_YN
+			, U.RSGNTN_YMD
+			, U.DEPT_ID
+			, U.JBGD_CD
+			, U.USER_IMG_FILE_ID
+			, U.USER_ROLE
+			, U.HIRE_YMD
+			, U.WORK_STTS_CD
+			, U.USER_OTP_SECRET
+			, D.DEPT_NM
+            , J.JBGD_NM
+		FROM USERS U
+		LEFT JOIN DEPARTMENT D ON U.DEPT_ID = D.DEPT_ID
+		LEFT JOIN JOB_GRADE J ON U.JBGD_CD = J.JBGD_CD
+        	WHERE U.USER_ID = #{userId}
+        	AND U.RSGNTN_YN = 'N'
+	</select>
+
+</mapper>

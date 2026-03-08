@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 18.     	윤서현            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.MeetingReservationMapper">
+
+	<!-- 회의실 예약 한 건 상세조회 -->
+	<select id="selectMeetingReservation" resultType="kr.or.ddit.vo.MeetingReservationVO">
+		SELECT
+			RE.RESERVATION_ID
+			, RE.ROOM_ID
+			, RE.USER_ID
+			, RE.START_TIME
+			, RE.END_TIME
+			, RE.TITLE
+			, RE.MEETING_DATE
+			, U.USER_NM
+			, D.DEPT_NM
+			, MR.RNUM
+		FROM
+            MEETING_RESERVATION RE
+        LEFT JOIN
+			USERS U
+			ON U.USER_ID = RE.USER_ID
+		LEFT JOIN
+			DEPARTMENT D
+			ON U.DEPT_ID = D.DEPT_ID
+        LEFT JOIN (
+            SELECT
+                ROW_NUMBER() OVER () AS RNUM, R.*
+            FROM ( SELECT
+                        ROOM_ID
+                        , ROOM_NAME
+                    FROM
+                        MEETING_ROOM
+                    ORDER BY
+                        ROOM_ID) R
+            ) MR
+            ON MR.ROOM_ID = RE.ROOM_ID
+		WHERE
+			RE.RESERVATION_ID = #{reservationId}
+	</select>
+
+	<!-- 회의실 예약 리스트 조회 -->
+	<select id="selectMeetingReservationList" resultType="kr.or.ddit.vo.MeetingReservationVO">
+    SELECT
+			RE.RESERVATION_ID
+			,RE.ROOM_ID
+			,RE.USER_ID
+			,RE.START_TIME
+			,RE.END_TIME
+			,RE.TITLE
+			,RE.MEETING_DATE
+			,RM.ROOM_NAME
+			,U.USER_NM
+			,FD.FILE_PATH
+			,D.DEPT_NM
+            ,MR.RNUM
+		FROM
+            MEETING_RESERVATION RE
+        LEFT JOIN
+        	MEETING_ROOM RM
+        	ON RE.ROOM_ID = RM.ROOM_ID
+       	LEFT JOIN
+       		USERS U
+       		ON RE.USER_ID = U.USER_ID
+       	LEFT JOIN
+       		DEPARTMENT D
+       		ON D.DEPT_ID = U.DEPT_ID
+       	LEFT JOIN
+       		FILE_DETAIL FD
+       		ON FD.FILE_ID = U.USER_IMG_FILE_ID
+        LEFT JOIN (
+            SELECT
+                ROW_NUMBER() OVER () AS RNUM, R.*
+            FROM ( SELECT
+                        ROOM_ID
+                        , ROOM_NAME
+                    FROM
+                        MEETING_ROOM
+                    ORDER BY
+                        ROOM_ID) R
+            ) MR
+            ON MR.ROOM_ID = RE.ROOM_ID
+        <trim prefix="WHERE" prefixOverrides="AND |OR">
+	        <if test="!admin">
+	        	AND RM.DEL_YN = 'N'
+	        </if>
+			<if test="meetingDate != null">
+				AND MEETING_DATE::date = #{meetingDate} <!-- LocalDate 자동 형 변환용 -->
+			</if>
+			<if test="roomId != null and @org.apache.commons.lang3.StringUtils@isNotBlank(roomId)">
+				AND RE.ROOM_ID = #{roomId}
+			</if>
+		</trim>
+		ORDER BY
+			MEETING_DATE, START_TIME
+	</select>
+
+	<!-- 회의실 예약 등록 -->
+	<insert id="insertMeetingReservation">
+		<selectKey keyProperty="reservationId" resultType="Integer" order="BEFORE">
+			SELECT nextval('SEQ_MEETING_RESERVATION')
+		</selectKey>
+		INSERT INTO MEETING_RESERVATION(
+			RESERVATION_ID
+			,ROOM_ID
+			,USER_ID
+			,START_TIME
+			,END_TIME
+			,TITLE
+			<if test="meetingDate != null">
+				,MEETING_DATE
+			</if>
+			<if test="recurringId != null">
+			 	,RECURRING_ID
+			 </if>
+		)VALUES(
+			 #{reservationId}
+			 ,#{roomId}
+			 ,#{userId}
+			 ,#{startTime}
+			 ,#{endTime}
+			 ,#{title}
+			 <if test="meetingDate != null">
+			 	,#{meetingDate, jdbcType=DATE}
+			 </if>
+			 <if test="recurringId != null">
+			 	,#{recurringId}
+			 </if>
+		)
+	</insert>
+
+	<!-- 회의실 예약 수정 -->
+	<update id="updateMeetingReservation">
+		UPDATE
+			MEETING_RESERVATION
+		SET
+			ROOM_ID = #{roomId}
+			, USER_ID = #{userId}
+			, START_TIME = #{startTime}
+			, END_TIME = #{endTime}
+			, TITLE = #{title}
+			<if test="meetingDate != null">
+				, MEETING_DATE = #{meetingDate, jdbcType=DATE}
+			</if>
+		WHERE
+			RESERVATION_ID = #{reservationId}
+	</update>
+
+	<!-- 회의실 예약 취소 -->
+	<delete id="deleteMeetingReservation">
+		DELETE FROM
+			MEETING_RESERVATION
+		<trim prefix="where" prefixOverrides="AND |OR">
+			<if test="reservationId != null">
+				RESERVATION_ID = #{reservationId}
+			</if>
+			<if test="recurringId != null">
+				RECURRING_ID = #{recurringId}
+				AND
+				<![CDATA[MEETING_DATE > CURRENT_TIMESTAMP]]>
+			</if>
+		</trim>
+	</delete>
+
+	<!-- 이미 예약된 회의실인지 조회 -->
+	<select id="selectExistMeetingReservation" resultType="kr.or.ddit.vo.MeetingReservationVO">
+		SELECT
+		    reservation_id,
+		    room_id,
+		    user_id,
+		    start_time,
+		    end_time,
+		    title,
+		    meeting_date
+		FROM
+		    meeting_reservation
+		WHERE
+		    room_id = #{roomId}
+		AND
+			meeting_date = #{meetingDate, jdbcType=DATE}
+		AND
+		    <![CDATA[start_time < #{endTime}]]>
+		AND
+		   <![CDATA[end_time > #{startTime}]]>
+		<if test="reservationId != null">
+		AND
+			reservation_id != #{reservationId}
+		</if>
+	</select>
+
+</mapper>

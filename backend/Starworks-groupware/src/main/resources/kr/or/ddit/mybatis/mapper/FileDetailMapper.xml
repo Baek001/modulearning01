@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.FileDetailMapper">
+    <select id="selectFileDetailList" resultType="kr.or.ddit.vo.FileDetailVO">
+        SELECT
+            FILE_ID,
+            FILE_SEQ,
+            ORGN_FILE_NM,
+            SAVE_FILE_NM,
+            EXT_FILE,
+            FILE_MIME_TYPE,
+            FILE_PATH,
+            FILE_SIZE,
+            COALESCE(DEL_YN, 'N') AS DEL_YN
+        FROM FILE_DETAIL
+        WHERE FILE_ID = #{fileId}
+          AND COALESCE(DEL_YN, 'N') = 'N'
+        ORDER BY FILE_SEQ
+    </select>
+
+    <select id="selectFileDetail" resultType="kr.or.ddit.vo.FileDetailVO">
+        SELECT
+            FILE_ID,
+            FILE_SEQ,
+            ORGN_FILE_NM,
+            SAVE_FILE_NM,
+            EXT_FILE,
+            FILE_MIME_TYPE,
+            FILE_PATH,
+            FILE_SIZE,
+            COALESCE(DEL_YN, 'N') AS DEL_YN
+        FROM FILE_DETAIL
+        WHERE FILE_SEQ = #{fileSeq}
+          AND COALESCE(DEL_YN, 'N') = 'N'
+    </select>
+
+    <select id="selectFileDetailS3" resultType="kr.or.ddit.vo.FileDetailVO">
+        SELECT
+            FILE_ID,
+            FILE_SEQ,
+            ORGN_FILE_NM,
+            SAVE_FILE_NM,
+            EXT_FILE,
+            FILE_MIME_TYPE,
+            FILE_PATH,
+            FILE_SIZE,
+            COALESCE(DEL_YN, 'N') AS DEL_YN
+        FROM FILE_DETAIL
+        WHERE SAVE_FILE_NM = #{saveFileNm}
+          AND COALESCE(DEL_YN, 'N') = 'N'
+    </select>
+
+    <select id="selectFileDetailBySaveName" resultType="kr.or.ddit.vo.FileDetailVO">
+        SELECT
+            FILE_ID,
+            FILE_SEQ,
+            ORGN_FILE_NM,
+            SAVE_FILE_NM,
+            EXT_FILE,
+            FILE_MIME_TYPE,
+            FILE_PATH,
+            FILE_SIZE,
+            COALESCE(DEL_YN, 'N') AS DEL_YN
+        FROM FILE_DETAIL
+        WHERE SAVE_FILE_NM = #{saveFileNm}
+          AND COALESCE(DEL_YN, 'N') = 'N'
+    </select>
+
+    <insert id="insertFileDetail">
+        <selectKey order="BEFORE" resultType="int" keyProperty="fileSeq">
+            SELECT nextval('FILE_DETAIL_SEQ')
+        </selectKey>
+        INSERT INTO FILE_DETAIL (
+            FILE_ID,
+            FILE_SEQ,
+            ORGN_FILE_NM,
+            SAVE_FILE_NM,
+            EXT_FILE,
+            FILE_MIME_TYPE,
+            FILE_PATH,
+            FILE_SIZE
+        ) VALUES (
+            #{fileId},
+            #{fileSeq},
+            #{orgnFileNm},
+            #{saveFileNm},
+            #{extFile},
+            #{fileMimeType},
+            #{filePath},
+            #{fileSize}
+        )
+    </insert>
+
+    <update id="deleteFileDetail">
+        UPDATE FILE_DETAIL
+        SET DEL_YN = 'Y'
+        WHERE FILE_ID = #{fileId}
+          AND FILE_SEQ = #{fileSeq}
+    </update>
+
+    <update id="restoreFileDetail">
+        UPDATE FILE_DETAIL
+        SET DEL_YN = 'N'
+        WHERE FILE_ID = #{fileId}
+          AND FILE_SEQ = #{fileSeq}
+    </update>
+</mapper>

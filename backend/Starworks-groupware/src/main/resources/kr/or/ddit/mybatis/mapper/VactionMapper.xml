@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+* == 개정이력(Modification Information) ==
+*
+* 수정일 수정자 수정내용
+* ========================== =======================
+* 2025. 9. 25. 윤서현 최초 생성
+* 2025. 10.23. 장어진 연차 계산 SQL문 추가
+*
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.VactionMapper">
+	<insert id="insertVaction">
+		INSERT INTO VACATION(
+		VACT_SQN
+		,ATRZ_DOC_ID
+		,VACT_USER_ID
+		,VACT_CD
+		,VACT_BGNG_DT
+		,VACT_END_DT
+		,USE_VACT_CNT
+		,ALLDAY
+		,VACT_EXPLN
+		)VALUES(
+		nextval('VACT_SQN_SEQ')
+		,#{atrzDocId}
+		,#{vactUserId}
+		,#{vactCd}
+		,#{vactBgngDt}
+		,#{vactEndDt}
+		,#{useVactCnt}
+		,#{allday}
+		,#{vactExpln}
+		)
+
+	</insert>
+
+	<select id="selectVactionList"
+		resultType="kr.or.ddit.vo.VactionVO">
+		SELECT
+		VACT_SQN
+		,ATRZ_DOC_ID
+		,VACT_USER_ID
+		,VACT_CD
+		,VACT_BGNG_DT
+		,VACT_END_DT
+		,USE_VACT_CNT
+		,ALLDAY
+		FROM
+		VACATION
+	</select>
+
+	<select id="selectVacation" resultType="kr.or.ddit.vo.VactionVO">
+		SELECT
+		VACT_SQN
+		,ATRZ_DOC_ID
+		,VACT_USER_ID
+		,VACT_CD
+		,VACT_BGNG_DT
+		,VACT_END_DT
+		,USE_VACT_CNT
+		,ALLDAY
+		FROM
+		VACATION
+		WHERE
+		VACT_SQN=#{vactSqn}
+	</select>
+
+	<select id="selectVacationDaysbyUser" resultType="int">
+		SELECT
+		COALESCE(SUM(USE_VACT_CNT),0)
+		FROM VACATION
+		WHERE VACT_USER_ID = #{vactUserId}
+		AND VACT_CD = #{vactCd}
+		AND VACT_BGNG_DT >= TO_DATE(#{year} || '-01-01', 'YYYY-MM-DD')
+		AND <![CDATA[ VACT_BGNG_DT < TO_DATE((#{year} + 1) || '-01-01', 'YYYY-MM-DD') ]]>
+	</select>
+</mapper>

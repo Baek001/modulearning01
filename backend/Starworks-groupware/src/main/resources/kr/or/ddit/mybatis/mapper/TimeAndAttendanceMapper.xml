@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.TimeAndAttendanceMapper">
+	<select id="selectTimeAndAttendanceList" resultType="kr.or.ddit.vo.TimeAndAttendanceVO">
+		SELECT
+			WORK_YMD
+			, USER_ID
+			, WORK_BGNG_DT
+			, WORK_END_DT
+			, WORK_HR
+			, LATE_YN
+			, EARLY_YN
+			, OVERTIME_YN
+			, OVERTIME_HR
+		FROM
+			TIME_AND_ATTENDANCE
+
+	</select>
+
+	<select id="selectUserTimeAndAttendance" resultType="kr.or.ddit.vo.TimeAndAttendanceVO">
+		SELECT
+			WORK_YMD
+			, USER_ID
+			, WORK_BGNG_DT
+			, WORK_END_DT
+			, WORK_HR
+			, LATE_YN
+			, EARLY_YN
+			, OVERTIME_YN
+			, OVERTIME_HR
+		FROM
+			TIME_AND_ATTENDANCE
+		WHERE
+			USER_ID = #{userId}
+		ORDER BY
+			WORK_YMD DESC
+	</select>
+
+	<select id="selectTimeAndAttendance" resultType="kr.or.ddit.vo.TimeAndAttendanceVO">
+		SELECT
+			WORK_YMD
+			, USER_ID
+			, WORK_BGNG_DT
+			, WORK_END_DT
+			, WORK_HR
+			, LATE_YN
+			, EARLY_YN
+			, OVERTIME_YN
+			, OVERTIME_HR
+		FROM
+			TIME_AND_ATTENDANCE
+		WHERE
+			USER_ID = #{userId}
+			AND TO_CHAR(WORK_YMD, 'YYYYMMDD') = #{workYmd}
+	</select>
+
+	<insert id="insertTimeAndAttendance">
+		<selectKey order="BEFORE" resultType="String" keyProperty="workYmd">
+			select TO_CHAR(CURRENT_TIMESTAMP, 'YYYYMMDD')
+		</selectKey>
+		INSERT INTO TIME_AND_ATTENDANCE (
+			WORK_YMD
+			, USER_ID
+			, WORK_BGNG_DT
+			, LATE_YN
+		) VALUES (
+			TO_TIMESTAMP(#{workYmd}, 'YYYYMMDD')
+			, #{userId}
+			, CURRENT_TIMESTAMP
+			, #{lateYn}
+		)
+	</insert>
+	<insert id="insertTimeAndAttendanceForSchedule">
+		INSERT INTO TIME_AND_ATTENDANCE (
+			WORK_YMD
+			, USER_ID
+			, WORK_BGNG_DT
+			, LATE_YN
+		) VALUES (
+			TO_TIMESTAMP(#{workYmd}, 'YYYYMMDD')
+			, #{userId}
+			, #{workBgngDt}
+			, #{lateYn}
+		)
+	</insert>
+
+	<update id="updateTimeAndAttendance">
+		UPDATE TIME_AND_ATTENDANCE
+		SET
+			WORK_END_DT = #{workEndDt}
+			, WORK_HR = #{workHr}
+			, LATE_YN = #{lateYn}
+			, EARLY_YN = #{earlyYn}
+			, OVERTIME_YN = #{overtimeYn}
+			, OVERTIME_HR = #{overtimeHr}
+		WHERE
+			TO_CHAR(WORK_YMD, 'YYYYMMDD') = #{workYmd}
+			AND USER_ID = #{userId}
+	</update>
+
+	<update id="updateTimeAndAttendanceForSchedule">
+		UPDATE TIME_AND_ATTENDANCE
+		SET
+			WORK_BGNG_DT = #{workBgngDt}
+			, WORK_END_DT = #{workEndDt}
+			, WORK_HR = #{workHr}
+			, LATE_YN = #{lateYn}
+			, EARLY_YN = #{earlyYn}
+			, OVERTIME_YN = #{overtimeYn}
+			, OVERTIME_HR = #{overtimeHr}
+		WHERE
+			TO_CHAR(WORK_YMD, 'YYYYMMDD') = #{workYmd}
+			AND USER_ID = #{userId}
+	</update>
+</mapper>

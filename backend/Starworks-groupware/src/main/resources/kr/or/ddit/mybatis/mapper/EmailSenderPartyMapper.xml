@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	홍현택            최초 생성
+ *	2025.10. 10.		홍현택			수신자 조회 쿼리 추가 selectSenderByEmailId
+ *	2025.10. 13. 		홍현택		 deleteEmailSenderPartyByEmailId로 발신자 정보 삭제
+ *
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.EmailSenderPartyMapper">
+
+	<insert id="insertEmailSenderParty" parameterType="kr.or.ddit.vo.EmailSenderPartyVO">
+		INSERT INTO EMAIL_SENDER_PARTY (
+			MAIL_SDPT_SQN
+			, EMAIL_CONT_ID
+			, USER_ID
+		) VALUES (
+			nextval('MAIL_SDPT_SQN_SEQ')
+			, #{emailContId}
+			, #{userId}
+		)
+	</insert>
+
+	<select id="selectEmailSenderPartyList" resultType="kr.or.ddit.vo.EmailSenderPartyVO">
+		SELECT
+		MAIL_SDPT_SQN
+		,EMAIL_CONT_ID
+		,USER_ID
+	FROM
+		EMAIL_SENDER_PARTY
+	</select>
+
+	<select id="selectEmailSenderParty">
+		SELECT
+		MAIL_SDPT_SQN
+		,EMAIL_CONT_ID
+		,USER_ID
+	FROM
+		EMAIL_SENDER_PARTY
+	WHERE
+		USER_ID = #{UserId}
+	</select>
+
+  <select id="selectTotalRecord" parameterType="kr.or.ddit.comm.paging.PaginationInfo" resultType="int">
+    SELECT COUNT(*)
+    FROM EMAIL_SENDER_PARTY
+  </select>
+
+
+  <select id="selectEmailSenderPartyListNonPaging">
+    SELECT
+      MAIL_SDPT_SQN
+      ,EMAIL_CONT_ID
+      ,USER_ID
+    FROM
+    EMAIL_SENDER_PARTY
+    ORDER BY
+    MAIL_SDPT_SQN DESC
+    </select>
+
+    <select id="selectSenderByEmailId" parameterType="string" resultType="kr.or.ddit.vo.EmailSenderPartyVO">
+      SELECT
+          A.MAIL_SDPT_SQN,
+          A.EMAIL_CONT_ID,
+          A.USER_ID,
+          B.USER_NM AS "userName"
+      FROM
+          EMAIL_SENDER_PARTY A
+      INNER JOIN
+          USERS B ON A.USER_ID = B.USER_ID
+          WHERE A.EMAIL_CONT_ID = #{emailContId}
+        </select>
+
+        <delete id="deleteEmailSenderPartyByEmailId" parameterType="string">
+          DELETE FROM EMAIL_SENDER_PARTY
+          WHERE EMAIL_CONT_ID = #{emailContId}
+        </delete>
+
+      </mapper>

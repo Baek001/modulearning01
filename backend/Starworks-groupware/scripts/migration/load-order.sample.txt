@@ -1,0 +1,8 @@
+# Optional CSV load order (table name only, no extension)
+# Remove '#' lines. One table per line.
+# Example:
+# COMMON_CODE
+# DEPARTMENT
+# JOB_GRADE
+# USERS
+# ...

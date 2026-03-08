@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자            수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 26.     	임가영            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.DepartmentFileMappingMapper">
+
+<sql id="departmentFileSimpleSearchFrag">
+	<trim prefix="AND">
+		<if test="paging.simpleSearch neq null">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(paging.simpleSearch.searchWord)">
+				<choose>
+					<when test='paging.simpleSearch.searchType eq "title"'>
+						FD.ORGN_FILE_NM LIKE '%'|| #{paging.simpleSearch.searchWord}||'%'
+					</when>
+					<when test='paging.simpleSearch.searchType eq "writer"'>
+						U.USER_NM LIKE '%'|| #{paging.simpleSearch.searchWord}||'%'
+					</when>
+					<otherwise>
+						(FD.ORGN_FILE_NM LIKE '%'|| #{paging.simpleSearch.searchWord}||'%'
+						OR
+						U.USER_NM LIKE '%'|| #{paging.simpleSearch.searchWord}||'%')
+					</otherwise>
+				</choose>
+			</if>
+		</if>
+	</trim>
+</sql>
+
+<select id="selectDepartmentFileMappingTotalRecoard" resultType="int">
+	SELECT COUNT(*)
+	FROM (
+		SELECT
+            DFM.DEPT_ID
+            , DFM.DEPT_FILE_ID
+            , FM.CRT_USER_ID
+            , FM.CRT_DT
+            , FD.ORGN_FILE_NM
+            , FD.SAVE_FILE_NM
+            , FD.FILE_PATH
+            , FD.FILE_SIZE
+            , FD.FILE_SEQ
+            , U.USER_NM
+        FROM
+            DEPARTMENT_FILE_MAPPING DFM
+        INNER JOIN
+            FILE_MASTER FM ON DFM.DEPT_FILE_ID = FM.FILE_ID
+        INNER JOIN
+            FILE_DETAIL FD ON FM.FILE_ID = FD.FILE_ID
+        LEFT OUTER JOIN
+            USERS U ON FM.CRT_USER_ID = U.USER_ID
+        WHERE
+            DFM.DEPT_ID = #{deptId}
+         AND
+         	FD.DEL_YN = 'N'
+        <include refid="departmentFileSimpleSearchFrag" />
+        ORDER BY
+            FM.CRT_DT DESC)
+
+</select>
+
+<!-- 부서 문서함 (페이징 O) -->
+<select id="selectDepartmentFileMappingList" resultType="kr.or.ddit.vo.DepartmentFileMappingVO">
+	SELECT *
+	FROM (SELECT ROW_NUMBER() OVER () AS RNUM, F.*
+	    FROM (
+			SELECT
+		            DFM.DEPT_ID
+		            , DFM.DEPT_FILE_ID
+		            , FM.CRT_USER_ID
+		            , FM.CRT_DT
+		            , FD.ORGN_FILE_NM
+		            , FD.SAVE_FILE_NM
+		            , FD.FILE_PATH
+		            , FD.FILE_SIZE
+		            , FD.FILE_SEQ
+		            , U.USER_NM
+		            , FD.FILE_MIME_TYPE
+	                , J.JBGD_NM
+	                , DP.DEPT_NM
+		        FROM
+		            DEPARTMENT_FILE_MAPPING DFM
+		        INNER JOIN
+		            FILE_MASTER FM ON DFM.DEPT_FILE_ID = FM.FILE_ID
+		        INNER JOIN
+		            FILE_DETAIL FD ON FM.FILE_ID = FD.FILE_ID
+		        LEFT OUTER JOIN
+		            USERS U ON FM.CRT_USER_ID = U.USER_ID
+	            LEFT OUTER JOIN
+	                JOB_GRADE J ON J.JBGD_CD = U.JBGD_CD
+	            LEFT OUTER JOIN
+	                DEPARTMENT DP ON DP.DEPT_ID = U.DEPT_ID
+	            INNER JOIN
+	            (
+	            	WITH RECURSIVE DEPT_TREE AS (
+	            		SELECT DEPT_ID, UP_DEPT_ID
+	            		FROM DEPARTMENT
+	            		WHERE DEPT_ID = #{deptId}
+	            		UNION ALL
+	            		SELECT D.DEPT_ID, D.UP_DEPT_ID
+	            		FROM DEPARTMENT D
+	            		JOIN DEPT_TREE DT ON D.UP_DEPT_ID = DT.DEPT_ID
+	            	)
+	            	SELECT DEPT_ID FROM DEPT_TREE
+	            ) D
+	                ON DFM.DEPT_ID = D.DEPT_ID
+		        WHERE
+		         	FD.DEL_YN = 'N'
+	             <include refid="departmentFileSimpleSearchFrag" />
+	            ORDER BY
+	                FM.CRT_DT DESC) F)
+	WHERE
+	    RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+</select>
+
+<!-- 전사 문서함 (페이징 O) -->
+<select id="selectCompanyFileMappingList" resultType="kr.or.ddit.vo.DepartmentFileMappingVO">
+	SELECT *
+	FROM (SELECT ROW_NUMBER() OVER () AS RNUM, F.*
+	    FROM (
+			SELECT
+		            DFM.DEPT_ID
+		            , DFM.DEPT_FILE_ID
+		            , FM.CRT_USER_ID
+		            , FM.CRT_DT
+		            , FD.ORGN_FILE_NM
+		            , FD.SAVE_FILE_NM
+		            , FD.FILE_PATH
+		            , FD.FILE_SIZE
+		            , FD.FILE_SEQ
+		            , U.USER_NM
+		            , FD.FILE_MIME_TYPE
+	                , J.JBGD_NM
+	                , DP.DEPT_NM
+		        FROM
+		            DEPARTMENT_FILE_MAPPING DFM
+		        INNER JOIN
+		            FILE_MASTER FM ON DFM.DEPT_FILE_ID = FM.FILE_ID
+		        INNER JOIN
+		            FILE_DETAIL FD ON FM.FILE_ID = FD.FILE_ID
+		        LEFT OUTER JOIN
+		            USERS U ON FM.CRT_USER_ID = U.USER_ID
+	            LEFT OUTER JOIN
+	                JOB_GRADE J ON J.JBGD_CD = U.JBGD_CD
+	            LEFT OUTER JOIN
+	                DEPARTMENT DP ON DP.DEPT_ID = U.DEPT_ID
+		        WHERE
+		         	FD.DEL_YN = 'N'
+		         AND
+		         	DFM.DEPT_ID = #{deptId}
+	             <include refid="departmentFileSimpleSearchFrag" />
+	            ORDER BY
+	                FM.CRT_DT DESC) F)
+	WHERE
+	    RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+</select>
+
+<!-- 부서 문서함 (페이징 X) -->
+<select id="selectDepartmentFileMappingListNonPaging" resultType="kr.or.ddit.vo.DepartmentFileMappingVO">
+	    SELECT
+	            DFM.DEPT_ID
+	            , DFM.DEPT_FILE_ID
+	            , FM.CRT_USER_ID
+	            , FM.CRT_DT
+	            , FD.ORGN_FILE_NM
+	            , FD.SAVE_FILE_NM
+	            , FD.FILE_PATH
+	            , FD.FILE_SIZE
+	            , FD.FILE_SEQ
+	            , U.USER_NM
+	            , FD.FILE_MIME_TYPE
+                , J.JBGD_NM
+                , DP.DEPT_NM
+	        FROM
+	            DEPARTMENT_FILE_MAPPING DFM
+	        INNER JOIN
+	            FILE_MASTER FM ON DFM.DEPT_FILE_ID = FM.FILE_ID
+	        INNER JOIN
+	            FILE_DETAIL FD ON FM.FILE_ID = FD.FILE_ID
+	        LEFT OUTER JOIN
+	            USERS U ON FM.CRT_USER_ID = U.USER_ID
+            LEFT OUTER JOIN
+                JOB_GRADE J ON J.JBGD_CD = U.JBGD_CD
+            LEFT OUTER JOIN
+                DEPARTMENT DP ON DP.DEPT_ID = U.DEPT_ID
+            INNER JOIN
+            (
+            	WITH RECURSIVE DEPT_TREE AS (
+            		SELECT DEPT_ID, UP_DEPT_ID
+            		FROM DEPARTMENT
+            		WHERE DEPT_ID = #{deptId}
+            		UNION ALL
+            		SELECT D.DEPT_ID, D.UP_DEPT_ID
+            		FROM DEPARTMENT D
+            		JOIN DEPT_TREE DT ON D.UP_DEPT_ID = DT.DEPT_ID
+            	)
+            	SELECT DEPT_ID FROM DEPT_TREE
+            ) D
+                ON DFM.DEPT_ID = D.DEPT_ID
+	        WHERE
+	         	FD.DEL_YN = 'N'
+	        ORDER BY
+	            FM.CRT_DT DESC
+</select>
+
+<insert id="insertDepartmentFileMapping">
+	INSERT INTO
+		DEPARTMENT_FILE_MAPPING DFM (
+			DEPT_ID
+			,DEPT_FILE_ID
+		) VALUES (
+			#{deptId}
+			, #{deptFileId}
+		)
+</insert>
+
+<!-- 부서&전사문서함 삭제된 파일 전부 가져오기 -->
+<select id="selectDepartmentFileMappingVONonPagingByDelY" resultType="kr.or.ddit.vo.DepartmentFileMappingVO">
+	SELECT
+		DFM.DEPT_ID
+		, DFM.DEPT_FILE_ID
+		, FM.CRT_DT
+        , FD.FILE_ID
+        , FD.FILE_SEQ
+        , FD.ORGN_FILE_NM
+        , FD.EXT_FILE
+        , FD.FILE_SIZE
+        , FD.FILE_MIME_TYPE
+        , FD.DEL_YN
+        , U.USER_NM
+	FROM
+		DEPARTMENT_FILE_MAPPING DFM
+	INNER JOIN
+		FILE_MASTER FM
+		ON FM.FILE_ID = DFM.DEPT_FILE_ID
+	INNER JOIN
+		USERS U
+		ON U.USER_ID = FM.CRT_USER_ID
+    LEFT OUTER JOIN
+        FILE_DETAIL FD
+        ON FM.FILE_ID = FD.FILE_ID
+    LEFT OUTER JOIN
+    	USERS U
+    	ON U.USER_ID = FM.CRT_USER_ID
+    WHERE
+        U.USER_ID = #{userId}
+    AND
+        FD.DEL_YN = 'Y'
+</select>
+
+</mapper>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	윤서현            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.AuthorizationDocumentTemplateMapper">
+
+	<insert id="insertAuthDocumentTemplate">
+		INSERT INTO AUTHORIZATION_DOCUMENT_TEMPLATE(
+			ATRZ_DOC_TMPL_ID
+			,ATRZ_DOC_CD
+			,ATRZ_DOC_TMPL_NM
+			,HTML_CONTENTS
+			,ATRZ_SECURE_LVL
+			,ATRZ_SAVE_YEAR
+			,ATRZ_CATEGORY
+			,ATRZ_DESCRIPTION
+		)VALUES(
+			  'ATRZDOC' || LPAD(nextval('ATRZ_DOC_TMPL_ID_SEQ')::text, 3, '0')
+			 ,#{atrzDocCd}
+			 ,#{atrzDocTmplNm}
+			 ,#{htmlContents}
+			 ,#{atrzSecureLvl}
+			 ,#{atrzSaveYear}
+			 ,#{atrzCategory}
+			 ,#{atrzDescription}
+		)
+	</insert>
+
+	<!-- 전체 조회 -->
+	<select id="selectAuthDocumentTemplateList" resultType="kr.or.ddit.vo.AuthorizationDocumentTemplateVO">
+		SELECT
+			ATRZ_DOC_TMPL_ID
+			,ATRZ_DOC_CD
+			,ATRZ_DOC_TMPL_NM
+			,HTML_CONTENTS
+			,APPR_ATRZ_DOC_YN
+			,ATRZ_SECURE_LVL
+			,ATRZ_SAVE_YEAR
+			,ATRZ_CATEGORY
+			,ATRZ_DESCRIPTION
+			,CRT_DT
+			,DEL_YN
+		FROM
+			AUTHORIZATION_DOCUMENT_TEMPLATE
+		ORDER BY
+			CRT_DT DESC
+	</select>
+
+	<!-- 삭제되지 않은 템플릿만 조회 -->
+	<select id="selectAuthDocumentTemplateListDelN" resultType="kr.or.ddit.vo.AuthorizationDocumentTemplateVO">
+		SELECT
+			ATRZ_DOC_TMPL_ID
+			,ATRZ_DOC_CD
+			,ATRZ_DOC_TMPL_NM
+			,HTML_CONTENTS
+			,APPR_ATRZ_DOC_YN
+			,ATRZ_SECURE_LVL
+			,ATRZ_SAVE_YEAR
+			,ATRZ_CATEGORY
+			,ATRZ_DESCRIPTION
+			,CRT_DT
+			,DEL_YN
+		FROM
+			AUTHORIZATION_DOCUMENT_TEMPLATE
+		WHERE
+			DEL_YN = 'N'
+		ORDER BY
+			CRT_DT
+	</select>
+
+	<!-- 삭제되지 않은 템플릿 간단 조회 -->
+	<select id="selectAuthDocumentTemplateSimpleList">
+		SELECT
+			ATRZ_DOC_TMPL_ID
+			, ATRZ_DOC_CD
+			, ATRZ_DOC_TMPL_NM
+			, APPR_ATRZ_DOC_YN
+			,ATRZ_SECURE_LVL
+			,ATRZ_SAVE_YEAR
+			,ATRZ_CATEGORY
+			,ATRZ_DESCRIPTION
+			,CRT_DT
+			,DEL_YN
+		FROM
+			AUTHORIZATION_DOCUMENT_TEMPLATE
+		WHERE
+			DEL_YN = 'N'
+		ORDER BY
+			CRT_DT
+	</select>
+
+	<select id="selectAuthDocumentTemplate" resultType="kr.or.ddit.vo.AuthorizationDocumentTemplateVO">
+		SELECT
+			ATRZ_DOC_TMPL_ID
+			,ATRZ_DOC_CD
+			,ATRZ_DOC_TMPL_NM
+			,HTML_CONTENTS
+			,APPR_ATRZ_DOC_YN
+			,ATRZ_SECURE_LVL
+			,ATRZ_SAVE_YEAR
+			,ATRZ_CATEGORY
+			,ATRZ_DESCRIPTION
+			,CRT_DT
+			,DEL_YN
+		FROM
+			AUTHORIZATION_DOCUMENT_TEMPLATE
+		WHERE
+			ATRZ_DOC_TMPL_ID = #{atrzDocTmplId}
+	</select>
+
+	<update id="updateAuthDocumentTemplate">
+		UPDATE
+			AUTHORIZATION_DOCUMENT_TEMPLATE
+		SET
+			ATRZ_DOC_TMPL_NM = #{atrzDocTmplNm}
+			, ATRZ_SECURE_LVL = #{atrzSecureLvl}
+			, ATRZ_SAVE_YEAR = #{atrzSaveYear}
+			, ATRZ_CATEGORY = #{atrzCategory}
+			, ATRZ_DESCRIPTION = #{atrzDescription}
+		WHERE
+			ATRZ_DOC_TMPL_ID = #{atrzDocTmplId}
+	</update>
+
+	<update id="deleteAuthDocumentTemplate">
+		UPDATE
+			AUTHORIZATION_DOCUMENT_TEMPLATE
+		SET
+			DEL_YN = #{delYn}
+		WHERE
+			ATRZ_DOC_TMPL_ID = #{atrzDocTmplId}
+	</update>
+
+</mapper>

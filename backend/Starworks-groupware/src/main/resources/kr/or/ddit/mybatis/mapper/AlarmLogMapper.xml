@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 8.     	임가영            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.AlarmLogMapper">
+
+<select id="selectAlarmLogList" resultType="kr.or.ddit.vo.AlarmLogVO">
+	SELECT
+		ALARM_ID
+		, RECEIVER_ID
+		, SENDER_ID
+		, ALARM_CODE
+		, ALARM_MESSAGE
+		, ALARM_CATEGORY
+		, READ_YN
+		, CREATED_DT
+		, READ_DT
+		, RELATED_URL
+	FROM
+		ALARM_LOG
+	WHERE
+		RECEIVER_ID = #{username}
+	ORDER BY
+		CREATED_DT DESC
+</select>
+
+<select id="selectAlarmLogListTop10Desc">
+		SELECT
+		ALARM_ID
+		, RECEIVER_ID
+		, SENDER_ID
+		, ALARM_CODE
+		, ALARM_MESSAGE
+		, ALARM_CATEGORY
+		, READ_YN
+		, CREATED_DT
+		, READ_DT
+		, RELATED_URL
+	FROM
+		ALARM_LOG
+	WHERE
+		RECEIVER_ID = #{username}
+	ORDER BY
+		CREATED_DT DESC
+</select>
+
+<select id="selectAlarmLog" resultType="kr.or.ddit.vo.AlarmLogVO">
+	SELECT *
+	FROM (
+	    SELECT ROW_NUMBER() OVER () AS RNUM, AL.*
+	    FROM (
+	        SELECT
+	            ALARM_ID
+	            , RECEIVER_ID
+	            , SENDER_ID
+	            , ALARM_CODE
+	            , ALARM_MESSAGE
+	            , ALARM_CATEGORY
+	            , READ_YN
+	            , CREATED_DT
+	            , READ_DT
+	            , RELATED_URL
+	        FROM
+	            ALARM_LOG
+	        WHERE
+	            RECEIVER_ID = '2020026'
+	        ORDER BY
+	            CREATED_DT DESC) AL)
+	WHERE RNUM BETWEEN 1 AND 10
+</select>
+
+<insert id="insertAlarmLog">
+	INSERT INTO
+		ALARM_LOG (
+			ALARM_ID
+			, RECEIVER_ID
+			, SENDER_ID
+			, ALARM_CODE
+			, ALARM_MESSAGE
+			, ALARM_CATEGORY
+			, RELATED_URL
+		) VALUES(
+			nextval('ALRM_ID_SEQ')
+			, #{receiverId}
+			, #{senderId}
+			, #{alarmCode}
+			, #{alarmMessage}
+			, #{alarmCategory}
+			, #{relatedUrl}
+		)
+</insert>
+
+<update id="updateAlarmLog">
+	UPDATE
+		ALARM_LOG
+	SET
+		SENDER_ID 			= #{senderId}
+		, ALARM_CODE 		= #{alarmCode}
+		, ALARM_MESSAGE 	= #{alarmMessage}
+		, ALARM_CATEGORY	= #{alarmCategory}
+		, READ_YN			= #{readYn}
+		, READ_DT			= #{readDt}
+	WHERE
+		ALARM_ID = #{alarmId}
+</update>
+
+</mapper>

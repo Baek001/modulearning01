@@ -1,0 +1,17 @@
+{
+  "name": "starworks-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secrets:sync": "powershell -ExecutionPolicy Bypass -File scripts/sync-secrets.ps1"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.1.1"
+  },
+  "devDependencies": {
+    "wrangler": "4.71.0"
+  }
+}

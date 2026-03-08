@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자            수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 26.     	임가영            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.AlarmTemplateMapper">
+
+<select id="selectAlarmTemplateList" resultType="kr.or.ddit.vo.AlarmTemplateVO">
+	SELECT 
+		ALARM_CODE
+		, ALARM_TITLE
+		, ALARM_MESSAGE
+		, ALARM_CATEGORY
+	FROM 
+		ALARM_TEMPLATE
+</select>
+
+<select id="selectAlarmTemplate" resultType="kr.or.ddit.vo.AlarmTemplateVO">
+	SELECT
+		ALARM_CODE
+		, ALARM_TITLE
+		, ALARM_MESSAGE
+		, ALARM_CATEGORY
+		, RELATED_URL
+	FROM
+		ALARM_TEMPLATE
+	WHERE
+		ALARM_CODE = #{alarmCode}
+</select>
+
+</mapper>

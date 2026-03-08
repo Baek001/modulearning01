@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.DashboardPreferenceMapper">
+
+    <insert id="upsertPreference">
+        INSERT INTO USER_FEED_PREFERENCE (
+            USER_ID,
+            DEFAULT_SCOPE,
+            DEFAULT_SORT,
+            DEFAULT_VIEW,
+            DEFAULT_CATEGORY,
+            LAST_DEPT_ID,
+            LAST_SEARCH_Q
+        ) VALUES (
+            #{userId},
+            #{defaultScope},
+            #{defaultSort},
+            #{defaultView},
+            #{defaultCategory},
+            #{lastDeptId},
+            #{lastSearchQ}
+        )
+        ON CONFLICT (USER_ID) DO UPDATE SET
+            DEFAULT_SCOPE = EXCLUDED.DEFAULT_SCOPE,
+            DEFAULT_SORT = EXCLUDED.DEFAULT_SORT,
+            DEFAULT_VIEW = EXCLUDED.DEFAULT_VIEW,
+            DEFAULT_CATEGORY = EXCLUDED.DEFAULT_CATEGORY,
+            LAST_DEPT_ID = EXCLUDED.LAST_DEPT_ID,
+            LAST_SEARCH_Q = EXCLUDED.LAST_SEARCH_Q,
+            LAST_CHG_DT = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="selectPreference" resultType="kr.or.ddit.dashboard.dto.DashboardFeedPreferenceDTO">
+        SELECT
+            USER_ID,
+            DEFAULT_SCOPE,
+            DEFAULT_SORT,
+            DEFAULT_VIEW,
+            DEFAULT_CATEGORY,
+            LAST_DEPT_ID,
+            LAST_SEARCH_Q,
+            CRT_DT,
+            LAST_CHG_DT
+        FROM USER_FEED_PREFERENCE
+        WHERE USER_ID = #{userId}
+    </select>
+
+    <select id="selectCategoryCodes" resultType="string">
+        SELECT BBS_CTGR_CD
+        FROM USER_FEED_CATEGORY
+        WHERE USER_ID = #{userId}
+        ORDER BY BBS_CTGR_CD
+    </select>
+
+    <delete id="deleteCategoryCodes">
+        DELETE FROM USER_FEED_CATEGORY
+        WHERE USER_ID = #{userId}
+    </delete>
+
+    <insert id="insertCategoryCode">
+        INSERT INTO USER_FEED_CATEGORY (
+            USER_ID,
+            BBS_CTGR_CD
+        ) VALUES (
+            #{userId},
+            #{bbsCtgrCd}
+        )
+        ON CONFLICT (USER_ID, BBS_CTGR_CD) DO NOTHING
+    </insert>
+
+    <select id="selectReadPostIds" resultType="string">
+        SELECT PST_ID
+        FROM USER_FEED_READ
+        WHERE USER_ID = #{userId}
+    </select>
+
+    <insert id="insertReadPost">
+        INSERT INTO USER_FEED_READ (
+            USER_ID,
+            PST_ID
+        ) VALUES (
+            #{userId},
+            #{pstId}
+        )
+        ON CONFLICT (USER_ID, PST_ID) DO UPDATE SET
+            READ_DT = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="selectSavedPostIds" resultType="string">
+        SELECT PST_ID
+        FROM USER_SAVED_POST
+        WHERE USER_ID = #{userId}
+        ORDER BY CRT_DT DESC
+    </select>
+
+    <insert id="insertSavedPost">
+        INSERT INTO USER_SAVED_POST (
+            USER_ID,
+            PST_ID
+        ) VALUES (
+            #{userId},
+            #{pstId}
+        )
+        ON CONFLICT (USER_ID, PST_ID) DO NOTHING
+    </insert>
+
+    <delete id="deleteSavedPost">
+        DELETE FROM USER_SAVED_POST
+        WHERE USER_ID = #{userId}
+          AND PST_ID = #{pstId}
+    </delete>
+
+    <select id="selectCommentedPostIds" resultType="string">
+        SELECT DISTINCT PST_ID
+        FROM BOARD_COMMENT
+        WHERE CRT_USER_ID = #{userId}
+          AND COALESCE(DEL_YN, 'N') = 'N'
+    </select>
+
+    <select id="selectFavoriteUsers" resultType="kr.or.ddit.dashboard.dto.DashboardFavoriteUserDTO">
+        SELECT
+            F.USER_ID,
+            F.TARGET_USER_ID,
+            U.USER_NM,
+            U.USER_EMAIL,
+            U.USER_TELNO,
+            U.EXT_TEL,
+            U.DEPT_ID,
+            D.DEPT_NM,
+            U.JBGD_CD,
+            J.JBGD_NM,
+            U.WORK_STTS_CD,
+            C.CODE_NM AS WORK_STTS_NM,
+            FD.FILE_PATH,
+            F.CRT_DT
+        FROM USER_FAVORITE_USER F
+        INNER JOIN USERS U
+            ON F.TARGET_USER_ID = U.USER_ID
+        LEFT JOIN DEPARTMENT D
+            ON U.DEPT_ID = D.DEPT_ID
+        LEFT JOIN JOB_GRADE J
+            ON U.JBGD_CD = J.JBGD_CD
+        LEFT JOIN COMMON_CODE C
+            ON U.WORK_STTS_CD = C.CODE_ID
+        LEFT JOIN FILE_DETAIL FD
+            ON U.USER_IMG_FILE_ID = FD.FILE_ID
+        WHERE F.USER_ID = #{userId}
+          AND COALESCE(U.RSGNTN_YN, 'N') = 'N'
+        ORDER BY F.CRT_DT DESC, U.USER_NM
+    </select>
+
+    <insert id="insertFavoriteUser">
+        INSERT INTO USER_FAVORITE_USER (
+            USER_ID,
+            TARGET_USER_ID
+        ) VALUES (
+            #{userId},
+            #{targetUserId}
+        )
+        ON CONFLICT (USER_ID, TARGET_USER_ID) DO NOTHING
+    </insert>
+
+    <delete id="deleteFavoriteUser">
+        DELETE FROM USER_FAVORITE_USER
+        WHERE USER_ID = #{userId}
+          AND TARGET_USER_ID = #{targetUserId}
+    </delete>
+
+    <select id="countFavoriteUser" resultType="int">
+        SELECT COUNT(*)
+        FROM USER_FAVORITE_USER
+        WHERE USER_ID = #{userId}
+          AND TARGET_USER_ID = #{targetUserId}
+    </select>
+
+    <select id="selectTodos" resultType="kr.or.ddit.dashboard.dto.DashboardTodoDTO">
+        SELECT
+            T.TODO_ID,
+            T.USER_ID,
+            T.TARGET_USER_ID,
+            TU.USER_NM AS TARGET_USER_NAME,
+            D.DEPT_NM AS TARGET_DEPT_NAME,
+            J.JBGD_NM AS TARGET_JOB_GRADE_NAME,
+            T.TODO_TTL,
+            T.TODO_CN,
+            T.DONE_YN,
+            T.DUE_DT,
+            T.CRT_DT,
+            T.LAST_CHG_DT
+        FROM USER_TODO T
+        LEFT JOIN USERS TU
+            ON T.TARGET_USER_ID = TU.USER_ID
+        LEFT JOIN DEPARTMENT D
+            ON TU.DEPT_ID = D.DEPT_ID
+        LEFT JOIN JOB_GRADE J
+            ON TU.JBGD_CD = J.JBGD_CD
+        WHERE T.USER_ID = #{userId}
+        ORDER BY
+            CASE WHEN COALESCE(T.DONE_YN, 'N') = 'N' THEN 0 ELSE 1 END,
+            T.DUE_DT NULLS LAST,
+            T.CRT_DT DESC
+    </select>
+
+    <insert id="insertTodo" useGeneratedKeys="true" keyProperty="todoId">
+        INSERT INTO USER_TODO (
+            USER_ID,
+            TARGET_USER_ID,
+            TODO_TTL,
+            TODO_CN,
+            DONE_YN,
+            DUE_DT
+        ) VALUES (
+            #{userId},
+            #{targetUserId},
+            #{todoTtl},
+            #{todoCn},
+            COALESCE(#{doneYn}, 'N'),
+            #{dueDt}
+        )
+    </insert>
+
+    <update id="updateTodo">
+        UPDATE USER_TODO
+        SET
+            TARGET_USER_ID = #{targetUserId},
+            TODO_TTL = #{todoTtl},
+            TODO_CN = #{todoCn},
+            DONE_YN = COALESCE(#{doneYn}, 'N'),
+            DUE_DT = #{dueDt},
+            LAST_CHG_DT = CURRENT_TIMESTAMP
+        WHERE USER_ID = #{userId}
+          AND TODO_ID = #{todoId}
+    </update>
+
+    <delete id="deleteTodo">
+        DELETE FROM USER_TODO
+        WHERE USER_ID = #{userId}
+          AND TODO_ID = #{todoId}
+    </delete>
+
+    <select id="selectRecommendation" resultType="kr.or.ddit.dashboard.dto.DashboardCategoryRecommendationDTO">
+        SELECT
+            R.RECOMMEND_ID,
+            R.FROM_USER_ID,
+            FU.USER_NM AS FROM_USER_NAME,
+            FD.DEPT_NM AS FROM_DEPT_NAME,
+            R.TO_USER_ID,
+            TU.USER_NM AS TO_USER_NAME,
+            R.BBS_CTGR_CD,
+            R.MESSAGE,
+            R.ACCEPTED_YN,
+            R.READ_YN,
+            R.CRT_DT,
+            R.ACCEPTED_DT
+        FROM USER_CATEGORY_RECOMMEND R
+        LEFT JOIN USERS FU
+            ON R.FROM_USER_ID = FU.USER_ID
+        LEFT JOIN DEPARTMENT FD
+            ON FU.DEPT_ID = FD.DEPT_ID
+        LEFT JOIN USERS TU
+            ON R.TO_USER_ID = TU.USER_ID
+        WHERE R.RECOMMEND_ID = #{recommendId}
+    </select>
+
+    <select id="selectReceivedRecommendations" resultType="kr.or.ddit.dashboard.dto.DashboardCategoryRecommendationDTO">
+        SELECT
+            R.RECOMMEND_ID,
+            R.FROM_USER_ID,
+            FU.USER_NM AS FROM_USER_NAME,
+            FD.DEPT_NM AS FROM_DEPT_NAME,
+            R.TO_USER_ID,
+            TU.USER_NM AS TO_USER_NAME,
+            R.BBS_CTGR_CD,
+            R.MESSAGE,
+            R.ACCEPTED_YN,
+            R.READ_YN,
+            R.CRT_DT,
+            R.ACCEPTED_DT
+        FROM USER_CATEGORY_RECOMMEND R
+        LEFT JOIN USERS FU
+            ON R.FROM_USER_ID = FU.USER_ID
+        LEFT JOIN DEPARTMENT FD
+            ON FU.DEPT_ID = FD.DEPT_ID
+        LEFT JOIN USERS TU
+            ON R.TO_USER_ID = TU.USER_ID
+        WHERE R.TO_USER_ID = #{userId}
+        ORDER BY R.CRT_DT DESC
+    </select>
+
+    <select id="selectSentRecommendations" resultType="kr.or.ddit.dashboard.dto.DashboardCategoryRecommendationDTO">
+        SELECT
+            R.RECOMMEND_ID,
+            R.FROM_USER_ID,
+            FU.USER_NM AS FROM_USER_NAME,
+            FD.DEPT_NM AS FROM_DEPT_NAME,
+            R.TO_USER_ID,
+            TU.USER_NM AS TO_USER_NAME,
+            R.BBS_CTGR_CD,
+            R.MESSAGE,
+            R.ACCEPTED_YN,
+            R.READ_YN,
+            R.CRT_DT,
+            R.ACCEPTED_DT
+        FROM USER_CATEGORY_RECOMMEND R
+        LEFT JOIN USERS FU
+            ON R.FROM_USER_ID = FU.USER_ID
+        LEFT JOIN DEPARTMENT FD
+            ON FU.DEPT_ID = FD.DEPT_ID
+        LEFT JOIN USERS TU
+            ON R.TO_USER_ID = TU.USER_ID
+        WHERE R.FROM_USER_ID = #{userId}
+        ORDER BY R.CRT_DT DESC
+    </select>
+
+    <insert id="insertCategoryRecommendation" useGeneratedKeys="true" keyProperty="recommendId">
+        INSERT INTO USER_CATEGORY_RECOMMEND (
+            FROM_USER_ID,
+            TO_USER_ID,
+            BBS_CTGR_CD,
+            MESSAGE
+        ) VALUES (
+            #{fromUserId},
+            #{toUserId},
+            #{bbsCtgrCd},
+            #{message}
+        )
+    </insert>
+
+    <update id="updateCategoryRecommendation">
+        UPDATE USER_CATEGORY_RECOMMEND
+        SET
+            ACCEPTED_YN = #{acceptedYn},
+            READ_YN = COALESCE(#{readYn}, READ_YN),
+            ACCEPTED_DT = CASE
+                WHEN #{acceptedYn} = 'Y' THEN CURRENT_TIMESTAMP
+                ELSE ACCEPTED_DT
+            END
+        WHERE RECOMMEND_ID = #{recommendId}
+    </update>
+
+</mapper>

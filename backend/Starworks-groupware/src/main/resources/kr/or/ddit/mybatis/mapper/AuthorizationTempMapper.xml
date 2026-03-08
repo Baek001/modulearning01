@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.AuthorizationTempMapper">
+
+    <resultMap id="AuthorizationTempMap" type="kr.or.ddit.vo.AuthorizationTempVO">
+        <id property="atrzTempSqn" column="ATRZ_TEMP_SQN"/>
+        <result property="atrzUserId" column="ATRZ_USER_ID"/>
+        <result property="atrzDocTmplId" column="ATRZ_DOC_TMPL_ID"/>
+        <result property="atrzDocTtl" column="ATRZ_DOC_TTL"/>
+        <result property="atrzSbmtDt" column="ATRZ_SBMT_DT"/>
+        <result property="delYn" column="DEL_YN"/>
+        <result property="htmlData" column="HTML_DATA"/>
+        <result property="openYn" column="OPEN_YN"/>
+        <result property="atrzFileId" column="ATRZ_FILE_ID"/>
+        <result property="atrzDocTmplNm" column="ATRZ_DOC_TMPL_NM"/>
+    </resultMap>
+
+    <select id="selectAuthTempList" resultMap="AuthorizationTempMap" parameterType="string">
+        SELECT
+              A.ATRZ_TEMP_SQN
+            , A.ATRZ_USER_ID
+            , A.ATRZ_DOC_TMPL_ID
+            , A.ATRZ_DOC_TTL
+            , A.ATRZ_SBMT_DT
+            , A.DEL_YN
+            , A.HTML_DATA
+            , A.OPEN_YN
+            , A.ATRZ_FILE_ID
+            , T.ATRZ_DOC_TMPL_NM
+        FROM AUTHORIZATION_TEMP A
+        LEFT JOIN AUTHORIZATION_DOCUMENT_TEMPLATE T
+          ON A.ATRZ_DOC_TMPL_ID = T.ATRZ_DOC_TMPL_ID
+        WHERE A.ATRZ_USER_ID = #{loginId}
+          AND COALESCE(A.DEL_YN, 'N') = 'N'
+        ORDER BY A.ATRZ_SBMT_DT DESC, A.ATRZ_TEMP_SQN DESC
+    </select>
+
+    <select id="selectAuthTemp" resultMap="AuthorizationTempMap">
+        SELECT
+              A.ATRZ_TEMP_SQN
+            , A.ATRZ_USER_ID
+            , A.ATRZ_DOC_TMPL_ID
+            , A.ATRZ_DOC_TTL
+            , A.ATRZ_SBMT_DT
+            , A.DEL_YN
+            , A.HTML_DATA
+            , A.OPEN_YN
+            , A.ATRZ_FILE_ID
+            , T.ATRZ_DOC_TMPL_NM
+        FROM AUTHORIZATION_TEMP A
+        LEFT JOIN AUTHORIZATION_DOCUMENT_TEMPLATE T
+          ON A.ATRZ_DOC_TMPL_ID = T.ATRZ_DOC_TMPL_ID
+        WHERE A.ATRZ_TEMP_SQN = #{atrzTempSqn}
+    </select>
+
+    <insert id="insertAuthorizationTemp">
+        <selectKey keyProperty="atrzTempSqn" resultType="string" order="BEFORE">
+            SELECT nextval('AUTHORIZATION_TEMP_SEQ')::text
+        </selectKey>
+
+        INSERT INTO AUTHORIZATION_TEMP(
+              ATRZ_TEMP_SQN
+            , ATRZ_USER_ID
+            , ATRZ_DOC_TMPL_ID
+            , ATRZ_DOC_TTL
+            , ATRZ_SBMT_DT
+            , DEL_YN
+            , HTML_DATA
+            , OPEN_YN
+            , ATRZ_FILE_ID
+        ) VALUES (
+              #{atrzTempSqn}
+            , #{atrzUserId}
+            , #{atrzDocTmplId}
+            , #{atrzDocTtl}
+            , CURRENT_TIMESTAMP
+            , COALESCE(#{delYn}, 'N')
+            , #{htmlData}
+            , COALESCE(#{openYn}, 'N')
+            , #{atrzFileId}
+        )
+    </insert>
+
+    <update id="updateAuthorizationTemp">
+        UPDATE AUTHORIZATION_TEMP
+           SET ATRZ_DOC_TMPL_ID = #{atrzDocTmplId}
+             , ATRZ_DOC_TTL = #{atrzDocTtl}
+             , ATRZ_SBMT_DT = CURRENT_TIMESTAMP
+             , HTML_DATA = #{htmlData}
+             , OPEN_YN = COALESCE(#{openYn}, 'N')
+             , ATRZ_FILE_ID = #{atrzFileId}
+         WHERE ATRZ_TEMP_SQN = #{atrzTempSqn}
+           AND ATRZ_USER_ID = #{atrzUserId}
+    </update>
+
+    <delete id="deleteAuthTemp">
+        DELETE FROM AUTHORIZATION_TEMP
+        WHERE ATRZ_TEMP_SQN = #{atrzTempSqn}
+    </delete>
+</mapper>

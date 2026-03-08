@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 30.     	장어진            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.FullCalendarTeamMapper">
+	<select id="selectFullCalendarTeamList" resultType="kr.or.ddit.dto.FullCalendarTeamDTO">
+		SELECT
+		    event_id
+		    , event_type
+		    , title
+		    , start_dt
+		    , end_dt
+		    , allday
+		    , description
+		    , user_id
+		    , user_nm
+		    , biz_id
+		    , type
+		FROM
+		    fullcalendar_team
+		WHERE user_id = #{userId}
+	</select>
+</mapper>

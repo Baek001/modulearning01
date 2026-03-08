@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *  2025. 9. 26.     	장어진            INSERT 쿼리 수정
+ *	2025. 9. 27			임가영			insertFileMaster 쿼리문 수정
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.FileMasterMapper">
+
+<!-- 	<select id="selectFileMasterFileID" resultType="String"> -->
+<!-- 		SELECT 'FILE' || LPAD(nextval('FILE_ID_SEQ')::text, 8, '0') -->
+<!-- 	</select> -->
+
+	<select id="selectFileMasterList" resultType="kr.or.ddit.vo.FileMasterVO">
+		SELECT 
+			FILE_ID
+			, DEL_YN
+			, CRT_USER_ID
+			, CRT_DT
+		FROM 
+			FILE_MASTER
+	</select>
+	
+	<select id="selectFileMaster" resultType="kr.or.ddit.vo.FileMasterVO">
+		SELECT 
+			FILE_ID
+			, DEL_YN
+			, CRT_USER_ID
+			, CRT_DT
+		FROM 
+			FILE_MASTER
+		WHERE 
+			FILE_ID = #{fileId}
+		
+	</select>
+	
+	<insert id="insertFileMaster">
+		<selectKey order="BEFORE" resultType="String" keyProperty="fileId">
+			SELECT ('FILE' || LPAD(nextval('FILE_ID_SEQ')::text, 8, '0'))
+		</selectKey>
+		INSERT INTO FILE_MASTER (
+			FILE_ID
+			, CRT_USER_ID
+			, CRT_DT			
+		) VALUES (
+			#{fileId}
+			, #{crtUserId}
+			, CURRENT_TIMESTAMP
+		)
+	</insert>
+	<update id="updateFileMasterDelyn">
+		UPDATE FILE_MASTER
+		SET 
+			DEL_YN = 'Y'
+		WHERE
+			FILE_ID = #{fileId}			
+	</update>
+	
+	<!-- 자료실 삭제용 -->
+	<select id="selectFileMasterByUser" resultType="kr.or.ddit.vo.FileMasterVO">
+		SELECT
+			FM.FILE_ID
+			, FM.DEL_YN
+			, FM.CRT_USER_ID
+			, FM.CRT_DT
+			, FD.FILE_SEQ
+		FROM
+			FILE_MASTER FM
+		INNER JOIN
+			FILE_DETAIL FD
+			ON FM.FILE_ID = FD.FILE_ID
+		WHERE
+			FM.CRT_USER_ID = #{crtUserId}
+		AND
+			FM.FILE_ID = #{fileId}
+		AND
+			FD.FILE_SEQ = #{fileSeq}
+	</select>
+</mapper>

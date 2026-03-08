@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 15.     	김주민            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.MessengerReadMapper">
+
+<insert id="insertReadRecords">
+	INSERT INTO MESSENGER_READ (MSG_CONT_ID, USER_ID, READ_DT)
+        SELECT
+            mc.MSG_CONT_ID,
+            #{userId},
+            CURRENT_TIMESTAMP
+        FROM
+            MESSENGER_CONTENT mc
+        LEFT JOIN
+            MESSENGER_READ mr
+            ON mc.MSG_CONT_ID = mr.MSG_CONT_ID AND mr.USER_ID = #{userId}
+        WHERE
+            mc.MSGR_ID = #{msgrId}
+            AND mc.USER_ID != #{userId}
+            AND mr.MSG_CONT_ID IS NULL
+</insert>
+
+</mapper>

@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.CommunityMapper">
+
+    <sql id="communityBaseColumns">
+        c.COMMUNITY_ID,
+        c.COMMUNITY_NM,
+        c.COMMUNITY_DESC,
+        c.COMMUNITY_TYPE_CD,
+        c.VISIBILITY_CD,
+        c.JOIN_POLICY_CD,
+        c.DEPT_ID,
+        d.DEPT_NM,
+        c.INTRO_TEXT,
+        c.ICON_FILE_ID,
+        c.COVER_FILE_ID,
+        c.POST_TEMPLATE_HTML,
+        c.CLOSED_YN,
+        c.CLOSED_DT,
+        c.OWNER_USER_ID,
+        owner.USER_NM AS OWNER_USER_NM,
+        c.DEL_YN,
+        c.CRT_DT,
+        c.LAST_CHG_DT,
+        COALESCE(pref.FAVORITE_YN, 'N') AS FAVORITE_YN,
+        pref.SORT_ORDR,
+        me.ROLE_CD AS MEMBER_ROLE_CD,
+        me.STATUS_CD AS MEMBER_STATUS_CD,
+        CASE WHEN me.STATUS_CD = 'active' THEN 'Y' ELSE 'N' END AS JOINED_YN,
+        CASE WHEN me.STATUS_CD = 'active' THEN TRUE ELSE FALSE END AS JOINED,
+        CASE
+            WHEN #{admin} = TRUE THEN TRUE
+            WHEN me.STATUS_CD = 'active' AND me.ROLE_CD IN ('owner', 'operator') THEN TRUE
+            ELSE FALSE
+        END AS MANAGEABLE,
+        CASE
+            WHEN COALESCE(c.CLOSED_YN, 'N') = 'Y' OR COALESCE(c.DEL_YN, 'N') = 'Y' THEN FALSE
+            WHEN c.COMMUNITY_TYPE_CD = 'org' THEN FALSE
+            WHEN me.STATUS_CD = 'active' THEN FALSE
+            WHEN c.VISIBILITY_CD = 'private' THEN FALSE
+            WHEN c.JOIN_POLICY_CD = 'invite_only' THEN FALSE
+            ELSE TRUE
+        END AS JOINABLE,
+        CASE
+            WHEN c.COMMUNITY_TYPE_CD = 'org' THEN FALSE
+            WHEN me.STATUS_CD = 'active' AND COALESCE(me.ROLE_CD, 'member') &lt;&gt; 'owner' THEN TRUE
+            ELSE FALSE
+        END AS LEAVABLE,
+        CASE
+            WHEN #{admin} = TRUE THEN TRUE
+            WHEN me.STATUS_CD = 'active' AND me.ROLE_CD = 'owner' AND c.COMMUNITY_TYPE_CD &lt;&gt; 'org' THEN TRUE
+            ELSE FALSE
+        END AS CLOSABLE,
+        (
+            SELECT COUNT(*)
+            FROM COMMUNITY_MEMBER cm2
+            WHERE cm2.COMMUNITY_ID = c.COMMUNITY_ID
+              AND cm2.STATUS_CD = 'active'
+        ) AS MEMBER_COUNT,
+        (
+            SELECT COUNT(*)
+            FROM COMMUNITY_MEMBER cm2
+            WHERE cm2.COMMUNITY_ID = c.COMMUNITY_ID
+              AND cm2.STATUS_CD = 'active'
+              AND cm2.ROLE_CD = 'operator'
+        ) AS OPERATOR_COUNT,
+        (
+            SELECT COUNT(*)
+            FROM COMMUNITY_MEMBER cm2
+            WHERE cm2.COMMUNITY_ID = c.COMMUNITY_ID
+              AND cm2.STATUS_CD = 'pending'
+        ) AS PENDING_COUNT,
+        icon_fd.FILE_PATH AS ICON_FILE_PATH,
+        cover_fd.FILE_PATH AS COVER_FILE_PATH
+    </sql>
+
+    <select id="selectCommunities" resultType="kr.or.ddit.vo.CommunityVO">
+        SELECT
+            <include refid="communityBaseColumns"/>
+        FROM COMMUNITY c
+        LEFT JOIN COMMUNITY_MEMBER me
+          ON me.COMMUNITY_ID = c.COMMUNITY_ID
+         AND me.USER_ID = #{userId}
+        LEFT JOIN COMMUNITY_USER_PREF pref
+          ON pref.COMMUNITY_ID = c.COMMUNITY_ID
+         AND pref.USER_ID = #{userId}
+        LEFT JOIN USERS owner
+          ON owner.USER_ID = c.OWNER_USER_ID
+        LEFT JOIN DEPARTMENT d
+          ON d.DEPT_ID = c.DEPT_ID
+        LEFT JOIN FILE_DETAIL icon_fd
+          ON icon_fd.FILE_ID = c.ICON_FILE_ID
+         AND COALESCE(icon_fd.DEL_YN, 'N') = 'N'
+        LEFT JOIN FILE_DETAIL cover_fd
+          ON cover_fd.FILE_ID = c.COVER_FILE_ID
+         AND COALESCE(cover_fd.DEL_YN, 'N') = 'N'
+        WHERE COALESCE(c.DEL_YN, 'N') = 'N'
+          AND COALESCE(c.CLOSED_YN, 'N') = 'N'
+          <choose>
+              <when test="view == 'discover'">
+                  AND c.COMMUNITY_TYPE_CD &lt;&gt; 'org'
+                  AND c.VISIBILITY_CD = 'public'
+                  AND COALESCE(me.STATUS_CD, '') NOT IN ('active', 'pending')
+              </when>
+              <when test="view == 'favorites'">
+                  AND me.STATUS_CD = 'active'
+                  AND COALESCE(pref.FAVORITE_YN, 'N') = 'Y'
+              </when>
+              <otherwise>
+                  AND me.STATUS_CD = 'active'
+              </otherwise>
+          </choose>
+          <if test="manageableOnly">
+              AND (
+                    #{admin} = TRUE
+                    OR (me.STATUS_CD = 'active' AND me.ROLE_CD IN ('owner', 'operator'))
+                  )
+          </if>
+          <if test="keyword != null and keyword != ''">
+              AND (
+                    c.COMMUNITY_NM ILIKE CONCAT('%', #{keyword}, '%')
+                    OR COALESCE(c.INTRO_TEXT, c.COMMUNITY_DESC, '') ILIKE CONCAT('%', #{keyword}, '%')
+                    OR COALESCE(c.COMMUNITY_DESC, '') ILIKE CONCAT('%', #{keyword}, '%')
+                  )
+          </if>
+        ORDER BY
+            CASE WHEN c.COMMUNITY_TYPE_CD = 'org' THEN 0 ELSE 1 END,
+            CASE WHEN COALESCE(pref.FAVORITE_YN, 'N') = 'Y' THEN 0 ELSE 1 END,
+            CASE WHEN c.COMMUNITY_TYPE_CD = 'org' THEN COALESCE(d.SORT_NUM, 9999) ELSE COALESCE(pref.SORT_ORDR, 9999) END,
+            c.COMMUNITY_NM,
+            c.COMMUNITY_ID
+    </select>
+
+    <select id="selectCommunity" resultType="kr.or.ddit.vo.CommunityVO">
+        SELECT
+            <include refid="communityBaseColumns"/>
+        FROM COMMUNITY c
+        LEFT JOIN COMMUNITY_MEMBER me
+          ON me.COMMUNITY_ID = c.COMMUNITY_ID
+         AND me.USER_ID = #{userId}
+        LEFT JOIN COMMUNITY_USER_PREF pref
+          ON pref.COMMUNITY_ID = c.COMMUNITY_ID
+         AND pref.USER_ID = #{userId}
+        LEFT JOIN USERS owner
+          ON owner.USER_ID = c.OWNER_USER_ID
+        LEFT JOIN DEPARTMENT d
+          ON d.DEPT_ID = c.DEPT_ID
+        LEFT JOIN FILE_DETAIL icon_fd
+          ON icon_fd.FILE_ID = c.ICON_FILE_ID
+         AND COALESCE(icon_fd.DEL_YN, 'N') = 'N'
+        LEFT JOIN FILE_DETAIL cover_fd
+          ON cover_fd.FILE_ID = c.COVER_FILE_ID
+         AND COALESCE(cover_fd.DEL_YN, 'N') = 'N'
+        WHERE c.COMMUNITY_ID = #{communityId}
+          AND COALESCE(c.DEL_YN, 'N') = 'N'
+          AND COALESCE(c.CLOSED_YN, 'N') = 'N'
+          AND (
+                #{admin} = TRUE
+                OR me.STATUS_CD = 'active'
+                OR (c.COMMUNITY_TYPE_CD &lt;&gt; 'org' AND c.VISIBILITY_CD = 'public')
+              )
+    </select>
+
+    <insert id="insertCommunity" parameterType="kr.or.ddit.vo.CommunityVO" useGeneratedKeys="true" keyProperty="communityId">
+        INSERT INTO COMMUNITY (
+            COMMUNITY_NM,
+            COMMUNITY_DESC,
+            COMMUNITY_TYPE_CD,
+            OWNER_USER_ID,
+            DEL_YN,
+            CRT_DT,
+            LAST_CHG_DT,
+            VISIBILITY_CD,
+            JOIN_POLICY_CD,
+            DEPT_ID,
+            INTRO_TEXT,
+            ICON_FILE_ID,
+            COVER_FILE_ID,
+            POST_TEMPLATE_HTML,
+            CLOSED_YN,
+            CLOSED_DT
+        ) VALUES (
+            #{communityNm},
+            #{communityDesc},
+            COALESCE(#{communityTypeCd}, 'general'),
+            #{ownerUserId},
+            'N',
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            COALESCE(#{visibilityCd}, 'private'),
+            COALESCE(#{joinPolicyCd}, 'invite_only'),
+            #{deptId},
+            COALESCE(#{introText}, #{communityDesc}),
+            #{iconFileId},
+            #{coverFileId},
+            #{postTemplateHtml},
+            COALESCE(#{closedYn}, 'N'),
+            #{closedDt}
+        )
+    </insert>
+
+    <update id="updateCommunity">
+        UPDATE COMMUNITY
+        SET COMMUNITY_NM = COALESCE(#{communityNm}, COMMUNITY_NM),
+            COMMUNITY_DESC = #{communityDesc},
+            COMMUNITY_TYPE_CD = COALESCE(#{communityTypeCd}, COMMUNITY_TYPE_CD),
+            OWNER_USER_ID = #{ownerUserId},
+            VISIBILITY_CD = COALESCE(#{visibilityCd}, VISIBILITY_CD),
+            JOIN_POLICY_CD = COALESCE(#{joinPolicyCd}, JOIN_POLICY_CD),
+            DEPT_ID = #{deptId},
+            INTRO_TEXT = COALESCE(#{introText}, #{communityDesc}),
+            ICON_FILE_ID = COALESCE(#{iconFileId}, ICON_FILE_ID),
+            COVER_FILE_ID = COALESCE(#{coverFileId}, COVER_FILE_ID),
+            POST_TEMPLATE_HTML = #{postTemplateHtml},
+            CLOSED_YN = COALESCE(#{closedYn}, CLOSED_YN),
+            CLOSED_DT = #{closedDt},
+            LAST_CHG_DT = CURRENT_TIMESTAMP
+        WHERE COMMUNITY_ID = #{communityId}
+          AND COALESCE(DEL_YN, 'N') = 'N'
+    </update>
+
+    <update id="deleteCommunity">
+        UPDATE COMMUNITY
+        SET DEL_YN = 'Y',
+            CLOSED_YN = 'Y',
+            CLOSED_DT = CURRENT_TIMESTAMP,
+            LAST_CHG_DT = CURRENT_TIMESTAMP
+        WHERE COMMUNITY_ID = #{communityId}
+          AND OWNER_USER_ID = #{userId}
+    </update>
+
+    <select id="selectCommunityMembers" resultType="kr.or.ddit.vo.CommunityMemberVO">
+        SELECT
+            cm.COMMUNITY_ID,
+            cm.USER_ID,
+            cm.ROLE_CD,
+            cm.STATUS_CD,
+            cm.CRT_DT,
+            cm.LAST_CHG_DT,
+            u.USER_NM,
+            u.USER_EMAIL,
+            d.DEPT_NM,
+            j.JBGD_NM,
+            fd.FILE_PATH
+        FROM COMMUNITY_MEMBER cm
+        JOIN USERS u
+          ON u.USER_ID = cm.USER_ID
+        LEFT JOIN DEPARTMENT d
+          ON d.DEPT_ID = u.DEPT_ID
+        LEFT JOIN JOB_GRADE j
+          ON j.JBGD_CD = u.JBGD_CD
+        LEFT JOIN FILE_DETAIL fd
+          ON fd.FILE_ID = u.USER_IMG_FILE_ID
+         AND COALESCE(fd.DEL_YN, 'N') = 'N'
+        WHERE cm.COMMUNITY_ID = #{communityId}
+          <if test="statusCd != null and statusCd != ''">
+              AND cm.STATUS_CD = #{statusCd}
+          </if>
+        ORDER BY
+            CASE cm.ROLE_CD
+                WHEN 'owner' THEN 0
+                WHEN 'operator' THEN 1
+                ELSE 2
+            END,
+            CASE cm.STATUS_CD
+                WHEN 'active' THEN 0
+                WHEN 'pending' THEN 1
+                WHEN 'invited' THEN 2
+                ELSE 3
+            END,
+            u.USER_NM
+    </select>
+
+    <insert id="upsertCommunityMember" parameterType="kr.or.ddit.vo.CommunityMemberVO">
+        INSERT INTO COMMUNITY_MEMBER (
+            COMMUNITY_ID,
+            USER_ID,
+            ROLE_CD,
+            STATUS_CD,
+            CRT_DT,
+            LAST_CHG_DT
+        ) VALUES (
+            #{communityId},
+            #{userId},
+            COALESCE(#{roleCd}, 'member'),
+            COALESCE(#{statusCd}, 'active'),
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (COMMUNITY_ID, USER_ID)
+        DO UPDATE SET
+            ROLE_CD = COALESCE(EXCLUDED.ROLE_CD, COMMUNITY_MEMBER.ROLE_CD),
+            STATUS_CD = COALESCE(EXCLUDED.STATUS_CD, COMMUNITY_MEMBER.STATUS_CD),
+            LAST_CHG_DT = CURRENT_TIMESTAMP
+    </insert>
+
+    <update id="removeCommunityMember">
+        UPDATE COMMUNITY_MEMBER
+        SET STATUS_CD = 'left',
+            LAST_CHG_DT = CURRENT_TIMESTAMP
+        WHERE COMMUNITY_ID = #{communityId}
+          AND USER_ID = #{userId}
+    </update>
+
+    <select id="existsActiveMember" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM COMMUNITY_MEMBER
+            WHERE COMMUNITY_ID = #{communityId}
+              AND USER_ID = #{userId}
+              AND STATUS_CD = 'active'
+        )
+    </select>
+</mapper>

@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "starworks-app",
+  "main": "src/index.js",
+  "compatibility_date": "2026-03-08",
+  "assets": {
+    "directory": "../frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "BACKEND_CONTAINER_NAME": "primary",
+    "BACKEND_INTERNAL_PORT": "18080",
+    "DB_DRIVER": "org.postgresql.Driver",
+    "COOKIE_SECURE": "true",
+    "COOKIE_SAME_SITE": "Lax",
+    "COOKIE_MAX_AGE": "86400",
+    "FILE_STORAGE_MODE": "s3",
+    "FILE_STORAGE_URL": "/starworks_medias",
+    "FORWARD_HEADERS_STRATEGY": "framework",
+    "AWS_REGION": "auto",
+    "AWS_PATH_STYLE_ACCESS": "true",
+    "APP_LOG_LEVEL": "info",
+    "REQUEST_MAPPING_LOG_LEVEL": "warn",
+    "SPRING_VIEW_LOG_LEVEL": "warn",
+    "SECURITY_LOG_LEVEL": "info",
+    "SPRING_AI_LOG_LEVEL": "warn"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "BackendContainer",
+        "name": "BACKEND"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "BackendContainer"
+      ]
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "BackendContainer",
+      "image": "../backend/Starworks-groupware/Dockerfile",
+      "instances": 1
+    }
+  ]
+}

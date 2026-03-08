@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	임가영           최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.PoliciesDetailMapper">
+
+	<select id="selectPoliciesDetailList" resultType="kr.or.ddit.vo.PoliciesDetailVO">
+		SELECT 
+			PD.FEATURE_ID
+			, PD.DEPT_ID
+			, PD.JBGD_CD
+            , P.REMARK
+            , F.FEATURE_NAME
+            , J.JBGD_NM
+            , D.DEPT_NM
+		FROM
+			POLICIES_DETAIL PD
+		INNER JOIN
+			POLICIES P ON P.FEATURE_ID = PD.FEATURE_ID 
+		INNER JOIN
+			FEATURES F ON F.FEATURE_ID = PD.FEATURE_ID
+		INNER JOIN
+			JOB_GRADE J ON J.JBGD_CD = PD.JBGD_CD
+		INNER JOIN
+			DEPARTMENT D ON D.DEPT_ID = PD.DEPT_ID
+	</select>
+	
+	<select id="selectPoliciesDetail" resultType="kr.or.ddit.vo.PoliciesDetailVO">
+		SELECT 
+			PD.FEATURE_ID
+			, PD.DEPT_ID
+			, PD.JBGD_CD
+            , P.REMARK
+            , F.FEATURE_NAME
+		FROM
+			POLICIES_DETAIL PD
+		INNER JOIN
+			POLICIES P ON P.FEATURE_ID = PD.FEATURE_ID 
+		INNER JOIN
+			FEATURES F ON F.FEATURE_ID = PD.FEATURE_ID
+        WHERE PD.FEATURE_ID = #{featureId}
+	</select>
+	
+	<insert id="insertPoliciesDetail">
+		INSERT INTO
+			POLICIES_DETAIL(
+				FEATURE_ID
+				, DEPT_ID
+				, JBGD_CD
+			) VALUES (
+				#{featureId}
+				, #{deptId}
+				, #{jbgdCd}
+			)
+	</insert>
+	
+	<update id="updatePoliciesDetailJdgdCd">
+		UPDATE
+			POLICIES_DETAIL
+		SET 
+			JBGD_CD = #{jbgdCd}
+		WHERE FEATURE_ID = #{featureId}
+	</update>
+	
+	<delete id="deletePoliciesDetail">
+		DELETE FROM
+			POLICIES_DETAIL
+		WHERE
+			FEATURE_ID = #{featureId}
+	</delete>
+
+</mapper>

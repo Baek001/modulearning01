@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 13.     	김주민            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.ProjectFileMapper">
+
+ <resultMap id="projectFileMap" type="kr.or.ddit.vo.ProjectFileVO">
+        <id property="fileSeq" column="FILE_SEQ"/>
+        <result property="fileId" column="FILE_ID"/>
+        <result property="orgnFileNm" column="ORGN_FILE_NM"/>
+        <result property="saveFileNm" column="SAVE_FILE_NM"/>
+        <result property="fileSize" column="FILE_SIZE"/>
+        <result property="extFile" column="EXT_FILE"/>
+        <result property="filePath" column="FILE_PATH"/>
+        <result property="fileSource" column="FILE_SOURCE"/>
+        <result property="sourceName" column="SOURCE_NAME"/>
+        <result property="sourceId" column="SOURCE_ID"/>
+        <result property="uploadDate" column="UPLOAD_DATE"/>
+        <result property="uploaderName" column="UPLOADER_NAME"/>
+    </resultMap>
+
+    <select id="selectTotalFileCount" resultType="int">
+    	SELECT COUNT(*) FROM (
+            SELECT fd.FILE_SEQ
+            FROM FILE_DETAIL fd
+            INNER JOIN FILE_MASTER fm ON fd.FILE_ID = fm.FILE_ID
+            INNER JOIN PROJECT p ON p.BIZ_FILE_ID = fm.FILE_ID
+            WHERE p.BIZ_ID = #{bizId}
+            AND fm.DEL_YN = 'N'
+
+            UNION ALL
+
+            SELECT fd.FILE_SEQ
+            FROM FILE_DETAIL fd
+            INNER JOIN FILE_MASTER fm ON fd.FILE_ID = fm.FILE_ID
+            INNER JOIN MAIN_TASK mt ON mt.TASK_FILE_ID = fm.FILE_ID
+            WHERE mt.BIZ_ID = #{bizId}
+            AND fm.DEL_YN = 'N'
+
+            UNION ALL
+
+            SELECT fd.FILE_SEQ
+            FROM FILE_DETAIL fd
+            INNER JOIN FILE_MASTER fm ON fd.FILE_ID = fm.FILE_ID
+            INNER JOIN PROJECT_BOARD pb ON pb.BIZ_PST_FILE_ID = fm.FILE_ID
+            WHERE pb.BIZ_ID = #{bizId}
+            AND fm.DEL_YN = 'N'
+        )
+    </select>
+
+    <!-- 프로젝트 관련 전체 파일 조회(페이징O) -->
+    <select id="selectProjectAllFiles" resultMap="projectFileMap">
+        WITH MV AS (
+            SELECT
+                ROW_NUMBER() OVER () AS RNUM,
+                FILE_SEQ,
+                FILE_ID,
+                ORGN_FILE_NM,
+                SAVE_FILE_NM,
+                FILE_SIZE,
+                EXT_FILE,
+                FILE_PATH,
+                FILE_SOURCE,
+                SOURCE_NAME,
+                SOURCE_ID,
+                UPLOAD_DATE,
+                UPLOADER_NAME
+            FROM (
+                SELECT
+                    fd.FILE_SEQ,
+                    fd.FILE_ID,
+                    fd.ORGN_FILE_NM,
+                    fd.SAVE_FILE_NM,
+                    fd.FILE_SIZE,
+                    fd.EXT_FILE,
+                    fd.FILE_PATH,
+                    '프로젝트' as FILE_SOURCE,
+                    p.BIZ_NM as SOURCE_NAME,
+                    p.BIZ_ID as SOURCE_ID,
+                    TO_CHAR(fm.CRT_DT, 'YYYY-MM-DD') as UPLOAD_DATE,
+                    u.USER_NM as UPLOADER_NAME
+                FROM FILE_DETAIL fd
+                INNER JOIN FILE_MASTER fm ON fd.FILE_ID = fm.FILE_ID
+                INNER JOIN PROJECT p ON p.BIZ_FILE_ID = fm.FILE_ID
+                LEFT JOIN USERS u ON fm.CRT_USER_ID = u.USER_ID
+                WHERE p.BIZ_ID = #{bizId}
+                AND fm.DEL_YN = 'N'
+
+                UNION ALL
+
+                SELECT
+                    fd.FILE_SEQ,
+                    fd.FILE_ID,
+                    fd.ORGN_FILE_NM,
+                    fd.SAVE_FILE_NM,
+                    fd.FILE_SIZE,
+                    fd.EXT_FILE,
+                    fd.FILE_PATH,
+                    '업무' as FILE_SOURCE,
+                    mt.TASK_NM as SOURCE_NAME,
+                    mt.TASK_ID as SOURCE_ID,
+                    TO_CHAR(fm.CRT_DT, 'YYYY-MM-DD') as UPLOAD_DATE,
+                    u.USER_NM as UPLOADER_NAME
+                FROM FILE_DETAIL fd
+                INNER JOIN FILE_MASTER fm ON fd.FILE_ID = fm.FILE_ID
+                INNER JOIN MAIN_TASK mt ON mt.TASK_FILE_ID = fm.FILE_ID
+                LEFT JOIN USERS u ON fm.CRT_USER_ID = u.USER_ID
+                WHERE mt.BIZ_ID = #{bizId}
+                AND fm.DEL_YN = 'N'
+
+                UNION ALL
+
+                SELECT
+                    fd.FILE_SEQ,
+                    fd.FILE_ID,
+                    fd.ORGN_FILE_NM,
+                    fd.SAVE_FILE_NM,
+                    fd.FILE_SIZE,
+                    fd.EXT_FILE,
+                    fd.FILE_PATH,
+                    '게시글' as FILE_SOURCE,
+                    pb.PST_TTL as SOURCE_NAME,
+                    pb.BIZ_PST_ID as SOURCE_ID,
+                    TO_CHAR(fm.CRT_DT, 'YYYY-MM-DD') as UPLOAD_DATE,
+                    u.USER_NM as UPLOADER_NAME
+                FROM FILE_DETAIL fd
+                INNER JOIN FILE_MASTER fm ON fd.FILE_ID = fm.FILE_ID
+                INNER JOIN PROJECT_BOARD pb ON pb.BIZ_PST_FILE_ID = fm.FILE_ID
+                LEFT JOIN USERS u ON fm.CRT_USER_ID = u.USER_ID
+                WHERE pb.BIZ_ID = #{bizId}
+                AND fm.DEL_YN = 'N'
+            )
+            ORDER BY UPLOAD_DATE DESC, FILE_SOURCE, SOURCE_NAME
+        )
+        SELECT *
+        FROM MV
+        WHERE RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+    </select>
+
+</mapper>

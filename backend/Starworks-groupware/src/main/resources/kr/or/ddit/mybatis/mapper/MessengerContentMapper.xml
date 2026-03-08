@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.MessengerContentMapper">
+
+    <sql id="messageColumns">
+        mc.MSG_CONT_ID,
+        mc.MSGR_ID,
+        mc.USER_ID,
+        u.USER_NM,
+        j.JBGD_NM,
+        d.DEPT_NM,
+        mc.CONTENTS,
+        mc.SEND_DT,
+        mc.READ_YN,
+        mc.DEL_YN,
+        mc.MSG_FILE_ID,
+        COALESCE(mc.MSG_TYPE_CD, 'text') AS MSG_TYPE_CD,
+        mc.FORWARD_FROM_MSG_CONT_ID,
+        fwd.CONTENTS AS FORWARD_PREVIEW,
+        fwd_user.USER_NM AS FORWARD_USER_NM,
+        fd.FILE_PATH AS USER_FILE_PATH,
+        (
+            SELECT COUNT(*)
+            FROM MESSENGER_USER mu
+            WHERE mu.MSGR_ID = mc.MSGR_ID
+              AND mu.LEFT_DT IS NULL
+              AND mu.USER_ID &lt;&gt; mc.USER_ID
+              AND mu.USER_ID NOT IN (
+                  SELECT mr.USER_ID
+                  FROM MESSENGER_READ mr
+                  WHERE mr.MSG_CONT_ID = mc.MSG_CONT_ID
+              )
+        ) AS UNREAD_COUNT
+    </sql>
+
+    <sql id="messageJoins">
+        LEFT JOIN USERS u ON mc.USER_ID = u.USER_ID
+        LEFT JOIN FILE_DETAIL fd ON u.USER_IMG_FILE_ID = fd.FILE_ID AND COALESCE(fd.DEL_YN, 'N') = 'N'
+        LEFT JOIN JOB_GRADE j ON u.JBGD_CD = j.JBGD_CD
+        LEFT JOIN DEPARTMENT d ON u.DEPT_ID = d.DEPT_ID
+        LEFT JOIN MESSENGER_CONTENT fwd ON fwd.MSG_CONT_ID = mc.FORWARD_FROM_MSG_CONT_ID
+        LEFT JOIN USERS fwd_user ON fwd.USER_ID = fwd_user.USER_ID
+    </sql>
+
+    <select id="selectMessengerContentByRoomId" resultType="kr.or.ddit.vo.MessengerContentVO">
+        SELECT
+            <include refid="messageColumns" />
+        FROM MESSENGER_CONTENT mc
+        <include refid="messageJoins" />
+        WHERE mc.MSGR_ID = #{msgrId}
+          AND COALESCE(mc.DEL_YN, 'N') = 'N'
+        ORDER BY mc.SEND_DT ASC
+    </select>
+
+    <select id="searchMessengerContentByRoomId" resultType="kr.or.ddit.vo.MessengerContentVO">
+        SELECT
+            <include refid="messageColumns" />
+        FROM MESSENGER_CONTENT mc
+        <include refid="messageJoins" />
+        WHERE mc.MSGR_ID = #{msgrId}
+          AND COALESCE(mc.DEL_YN, 'N') = 'N'
+          AND (
+                COALESCE(mc.CONTENTS, '') ILIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(u.USER_NM, '') ILIKE CONCAT('%', #{keyword}, '%')
+              )
+        ORDER BY mc.SEND_DT DESC
+    </select>
+
+    <select id="selectMessengerContentForExport" resultType="kr.or.ddit.vo.MessengerContentVO">
+        SELECT
+            <include refid="messageColumns" />
+        FROM MESSENGER_CONTENT mc
+        <include refid="messageJoins" />
+        WHERE mc.MSGR_ID = #{msgrId}
+          AND COALESCE(mc.DEL_YN, 'N') = 'N'
+        ORDER BY mc.SEND_DT ASC
+    </select>
+
+    <select id="selectMessengerContent" resultType="kr.or.ddit.vo.MessengerContentVO">
+        SELECT
+            <include refid="messageColumns" />
+        FROM MESSENGER_CONTENT mc
+        <include refid="messageJoins" />
+        WHERE mc.MSG_CONT_ID = #{msgContId}
+          AND COALESCE(mc.DEL_YN, 'N') = 'N'
+        LIMIT 1
+    </select>
+
+    <update id="updateReadStatus">
+        UPDATE MESSENGER_CONTENT
+        SET READ_YN = 'Y'
+        WHERE MSG_CONT_ID = #{msgContId}
+    </update>
+
+    <insert id="insertMessengerContent">
+        INSERT INTO MESSENGER_CONTENT (
+            MSG_CONT_ID,
+            USER_ID,
+            MSGR_ID,
+            CONTENTS,
+            SEND_DT,
+            DEL_YN,
+            READ_YN,
+            MSG_FILE_ID,
+            MSG_TYPE_CD,
+            FORWARD_FROM_MSG_CONT_ID
+        ) VALUES (
+            #{msgContId},
+            #{userId},
+            #{msgrId},
+            #{contents},
+            #{sendDt},
+            #{delYn},
+            #{readYn},
+            #{msgFileId},
+            COALESCE(#{msgTypeCd}, 'text'),
+            #{forwardFromMsgContId}
+        )
+    </insert>
+
+    <select id="selectMessengerContentList" resultType="kr.or.ddit.vo.MessengerContentVO">
+        SELECT
+            MSG_CONT_ID,
+            USER_ID,
+            MSGR_ID,
+            CONTENTS,
+            SEND_DT,
+            DEL_YN,
+            READ_YN,
+            MSG_FILE_ID,
+            COALESCE(MSG_TYPE_CD, 'text') AS MSG_TYPE_CD,
+            FORWARD_FROM_MSG_CONT_ID
+        FROM MESSENGER_CONTENT
+    </select>
+
+    <update id="softDeleteMessengerContent">
+        UPDATE MESSENGER_CONTENT
+        SET DEL_YN = 'Y'
+        WHERE MSG_CONT_ID = #{msgContId}
+          AND (
+                USER_ID = #{userId}
+                OR EXISTS (
+                    SELECT 1
+                    FROM MESSENGER_USER mu
+                    WHERE mu.MSGR_ID = MESSENGER_CONTENT.MSGR_ID
+                      AND mu.USER_ID = #{userId}
+                      AND mu.ROLE_CD = 'owner'
+                      AND mu.LEFT_DT IS NULL
+                )
+              )
+    </update>
+
+    <delete id="deleteMessengerContent">
+        DELETE FROM MESSENGER_CONTENT
+        WHERE MSG_CONT_ID = #{msgContId}
+    </delete>
+</mapper>

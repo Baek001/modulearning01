@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	김주민            최초 생성
+ *	2025. 10. 06. 		김주민			selectMatinTask 추가
+ *	2025. 10. 07. 		김주민			소프트 삭제를 위한 조건절 추가
+ * 	2025. 10. 08. 		김주민			updateTaskStatus 추가
+ *	2025. 10. 10. 		김주민			updateTaskProgress, selectMyTaskList 추가
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.MainTaskMapper">
+
+<select id="selectMyTaskTotalRecordByStatus" resultType="int">
+	SELECT COUNT(*)
+    FROM MAIN_TASK MT
+    INNER JOIN PROJECT P ON MT.BIZ_ID = P.BIZ_ID
+    WHERE MT.BIZ_USER_ID = #{userId}
+      AND MT.TASK_STTS_CD = #{status}
+      AND P.BIZ_STTS_CD != 'B304'
+</select>
+
+<select id="selectMyTaskListByStatus" resultType="kr.or.ddit.vo.MainTaskVO">
+	 WITH MV AS (
+        SELECT
+            ROW_NUMBER() OVER () AS RNUM,
+            MT.TASK_ID,
+            MT.BIZ_ID,
+            MT.BIZ_USER_ID,
+            MT.TASK_NM,
+            MT.TASK_DETAIL,
+            MT.STRT_TASK_DT,
+            MT.END_TASK_DT,
+            MT.TASK_PRGRS,
+            MT.TASK_STTS_CD,
+            MT.TASK_FILE_ID,
+            P.BIZ_NM,
+            U.USER_NM AS BIZ_USER_NM
+        FROM MAIN_TASK MT
+        INNER JOIN USERS U ON MT.BIZ_USER_ID = U.USER_ID
+        INNER JOIN PROJECT P ON MT.BIZ_ID = P.BIZ_ID
+        WHERE MT.BIZ_USER_ID = #{userId}
+          AND MT.TASK_STTS_CD = #{status}
+          AND P.BIZ_STTS_CD != 'B304'
+        ORDER BY MT.END_TASK_DT ASC
+    )
+    SELECT *
+    FROM MV
+    WHERE RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+</select>
+
+<select id="selectMyTaskTotalRecord">
+	SELECT COUNT(*)
+	FROM MAIN_TASK MT
+	INNER JOIN PROJECT P ON MT.BIZ_ID = P.BIZ_ID
+	WHERE MT.BIZ_USER_ID = #{bizUserId}
+		AND MT.TASK_STTS_CD != 'B405'
+		AND P.BIZ_STTS_CD != 'B304'
+</select>
+
+<!-- 내 프로젝트 페이지에 확인 가능한 내 업무 리스트(페이징o) -->
+<select id="selectMyTaskList" resultType="kr.or.ddit.vo.MainTaskVO">
+	WITH MV AS (
+        SELECT
+            ROW_NUMBER() OVER () AS RNUM,
+            MT.TASK_ID,
+            MT.BIZ_ID,
+            MT.BIZ_USER_ID,
+            MT.TASK_NM,
+            MT.TASK_DETAIL,
+            MT.STRT_TASK_DT,
+            MT.END_TASK_DT,
+            MT.TASK_PRGRS,
+            MT.TASK_STTS_CD,
+            MT.TASK_FILE_ID,
+            P.BIZ_NM,
+            U.USER_NM AS BIZ_USER_NM
+        FROM MAIN_TASK MT
+        INNER JOIN USERS U ON MT.BIZ_USER_ID = U.USER_ID
+        INNER JOIN PROJECT P ON MT.BIZ_ID = P.BIZ_ID
+        WHERE MT.BIZ_USER_ID = #{bizUserId}
+          AND MT.TASK_STTS_CD != 'B405'
+          AND P.BIZ_STTS_CD != 'B304'
+        ORDER BY
+            CASE MT.TASK_STTS_CD
+                WHEN 'B402' THEN 1
+                WHEN 'B401' THEN 2
+                WHEN 'B403' THEN 3
+                WHEN 'B404' THEN 4
+                ELSE 5
+            END,
+            MT.END_TASK_DT ASC
+    )
+    SELECT *
+    FROM MV
+    WHERE RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+</select>
+
+<!-- 업무 진행률 업데이트 -->
+<update id="updateTaskProgress">
+	UPDATE MAIN_TASK
+    SET TASK_PRGRS = #{taskPrgrs}
+    WHERE TASK_ID = #{taskId}
+</update>
+
+<!-- 업무 상태 업데이트 -->
+<update id="updateTaskStatus">
+	UPDATE MAIN_TASK
+	SET TASK_STTS_CD = #{taskSttsCd}
+	WHERE TASK_ID = #{taskId}
+</update>
+
+<select id="selectTotalRecord" resultType="int">
+	SELECT COUNT(*)
+	FROM MAIN_TASK
+	WHERE BIZ_ID = #{bizId}
+		AND TASK_STTS_CD != 'B405'
+		<if test="bizUserId != null and bizUserId != ''">
+			AND BIZ_USER_ID = #{bizUserId}
+		</if>
+</select>
+
+<select id="selectMainTaskList" resultType="kr.or.ddit.vo.MainTaskVO">
+	WITH SORTED_DATA AS (
+    SELECT
+        MT.TASK_ID
+        , MT.BIZ_ID
+        , MT.TASK_NM
+        , MT.TASK_DETAIL
+        , MT.TASK_STTS_CD
+        , MT.STRT_TASK_DT
+        , MT.END_TASK_DT
+        , MT.TASK_FILE_ID
+        , MT.BIZ_USER_ID
+        , U.USER_NM AS BIZ_USER_NM
+        , D.DEPT_NM AS BIZ_USER_DEPT_NM
+        , COALESCE(
+            ROUND(
+                (SELECT COUNT(*)
+                FROM TASK_CHECKLIST
+                WHERE TASK_ID = MT.TASK_ID
+                AND COMPLT_YN = 'Y') * 100.0 /
+                NULLIF((SELECT COUNT(*)
+                FROM TASK_CHECKLIST
+                WHERE TASK_ID = MT.TASK_ID), 0)
+            ), 0
+        ) AS TASK_PRGRS
+        , CASE MT.TASK_STTS_CD
+            WHEN 'B402' THEN 1
+            WHEN 'B401' THEN 2
+            WHEN 'B403' THEN 3
+            WHEN 'B404' THEN 4
+            ELSE 5
+        END AS STTS_PRIORITY
+    FROM MAIN_TASK MT
+    LEFT OUTER JOIN USERS U ON (U.USER_ID = MT.BIZ_USER_ID)
+    LEFT JOIN DEPARTMENT D ON (U.DEPT_ID = D.DEPT_ID)
+    WHERE
+        BIZ_ID = #{bizId}
+        AND TASK_STTS_CD != 'B405'
+        <if test="bizUserId != null and bizUserId != ''">
+        AND MT.BIZ_USER_ID = #{bizUserId}
+        </if>
+    ORDER BY STTS_PRIORITY, MT.END_TASK_DT ASC
+),
+MV AS (
+    SELECT ROW_NUMBER() OVER () AS RNUM, SORTED_DATA.*
+    FROM SORTED_DATA
+)
+SELECT *
+FROM MV
+WHERE RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+</select>
+
+<insert id="insertMainTask">
+	<selectKey order="BEFORE" resultType="String" keyProperty="taskId">
+		<![CDATA[
+	    SELECT
+	        #{bizId}
+	        || 'TASK'
+	        || LPAD(
+	            (
+	                COALESCE(
+	                    RIGHT(T2.task_id_max, 4),
+	                    '0'
+	                )::integer + 1
+	            )::text,
+	            4,
+	            '0'
+	        ) AS task_id
+	    FROM (
+	        SELECT MAX(task_id) AS task_id_max
+	        FROM main_task
+	        WHERE task_id >= #{bizId} || 'TASK0000'
+	          AND task_id < #{bizId} || 'TASK9999'
+	    ) T2
+	    ]]>
+	</selectKey>
+
+    INSERT INTO MAIN_TASK (
+        TASK_ID
+        , BIZ_ID
+        , TASK_NM
+        , TASK_DETAIL
+        , TASK_PRGRS
+        , TASK_STTS_CD
+        , STRT_TASK_DT
+        , END_TASK_DT
+        , TASK_FILE_ID
+        , BIZ_USER_ID
+    ) VALUES (
+        #{taskId}
+        , #{bizId}
+        , #{taskNm}
+        , #{taskDetail}
+        , #{taskPrgrs}
+        , #{taskSttsCd}
+        , #{strtTaskDt}
+        , #{endTaskDt}
+        , #{taskFileId}
+        , #{bizUserId}
+    )
+</insert>
+
+<!-- 프로젝트별 전체 업무 목록 조회 (페이징 없음) - 대시보드용 -->
+<select id="selectMainTaskListNonPaging" resultType="kr.or.ddit.vo.MainTaskVO">
+   SELECT
+        MT.TASK_ID
+        , MT.BIZ_ID
+        , MT.TASK_NM
+        , MT.TASK_DETAIL
+        , MT.TASK_STTS_CD
+        , MT.STRT_TASK_DT
+        , MT.END_TASK_DT
+        , MT.TASK_FILE_ID
+        , MT.BIZ_USER_ID
+        , U.USER_NM AS BIZ_USER_NM
+        , D.DEPT_NM AS BIZ_USER_DEPT_NM
+        , COALESCE(
+            ROUND(
+                (SELECT COUNT(*)
+                 FROM TASK_CHECKLIST
+                 WHERE TASK_ID = MT.TASK_ID
+                 AND COMPLT_YN = 'Y') * 100.0 /
+                NULLIF((SELECT COUNT(*)
+                        FROM TASK_CHECKLIST
+                        WHERE TASK_ID = MT.TASK_ID), 0)
+            ), 0
+        ) AS TASK_PRGRS
+    FROM MAIN_TASK MT
+        LEFT OUTER JOIN USERS U ON (U.USER_ID = MT.BIZ_USER_ID)
+        LEFT JOIN DEPARTMENT D ON (U.DEPT_ID = D.DEPT_ID)
+    WHERE
+        MT.BIZ_ID = #{bizId}
+        AND MT.TASK_STTS_CD != 'B405'
+    ORDER BY MT.TASK_ID
+</select>
+
+<!-- 내 업무 리스트 조회 (페이징 없음) - 대시보드용 -->
+<select id="selectMyTaskListNonPaging" resultType="kr.or.ddit.vo.MainTaskVO">
+	SELECT
+        MT.TASK_ID
+        , MT.BIZ_ID
+        , MT.BIZ_USER_ID
+        , MT.TASK_NM
+        , MT.TASK_DETAIL
+        , MT.STRT_TASK_DT
+        , MT.END_TASK_DT
+        , MT.TASK_PRGRS
+        , MT.TASK_STTS_CD
+        , MT.TASK_FILE_ID
+        , P.BIZ_NM
+        , U.USER_NM AS BIZ_USER_NM
+    FROM MAIN_TASK MT
+    INNER JOIN USERS U ON MT.BIZ_USER_ID = U.USER_ID
+    INNER JOIN PROJECT P ON MT.BIZ_ID = P.BIZ_ID
+    WHERE MT.BIZ_USER_ID = #{bizUserId}
+      AND MT.TASK_STTS_CD != 'B405'
+      AND P.BIZ_STTS_CD != 'B304'
+    ORDER BY
+        CASE MT.TASK_STTS_CD
+            WHEN 'B402' THEN 1
+            WHEN 'B401' THEN 2
+            WHEN 'B403' THEN 3
+            WHEN 'B404' THEN 4
+            ELSE 5
+        END,
+        MT.END_TASK_DT ASC
+</select>
+
+<!-- 업무 단건 조회 -->
+<select id="selectMainTask" resultType="kr.or.ddit.vo.MainTaskVO">
+    SELECT
+		MT.TASK_ID
+		, MT.BIZ_ID
+		, MT.TASK_NM
+		, MT.TASK_DETAIL
+		, MT.TASK_STTS_CD
+		, MT.STRT_TASK_DT
+		, MT.END_TASK_DT
+		, MT.TASK_FILE_ID
+		, MT.BIZ_USER_ID
+		, U.USER_NM AS BIZ_USER_NM
+		, D.DEPT_NM AS BIZ_USER_DEPT_NM
+		, P.BIZ_NM
+		, COALESCE(
+			ROUND(
+				(SELECT COUNT(*)
+				 FROM TASK_CHECKLIST
+				 WHERE TASK_ID = MT.TASK_ID
+				 AND COMPLT_YN = 'Y') * 100.0 /
+				NULLIF((SELECT COUNT(*)
+						FROM TASK_CHECKLIST
+						WHERE TASK_ID = MT.TASK_ID), 0)
+			), 0
+		) AS TASK_PRGRS
+	FROM MAIN_TASK MT
+	LEFT OUTER JOIN USERS U ON (U.USER_ID = MT.BIZ_USER_ID)
+	LEFT JOIN DEPARTMENT D ON (U.DEPT_ID = D.DEPT_ID)
+	LEFT JOIN PROJECT P ON (MT.BIZ_ID = P.BIZ_ID)
+	WHERE MT.TASK_ID = #{taskId}
+</select>
+
+<update id="updateMainTask">
+    UPDATE MAIN_TASK
+    SET
+    	TASK_NM = #{taskNm}
+        , TASK_DETAIL = #{taskDetail}
+        , TASK_PRGRS = #{taskPrgrs}
+        , TASK_STTS_CD = #{taskSttsCd}
+        , STRT_TASK_DT = #{strtTaskDt}
+        , END_TASK_DT = #{endTaskDt}
+        , TASK_FILE_ID = #{taskFileId}
+        , BIZ_USER_ID = #{bizUserId}
+    WHERE TASK_ID = #{taskId}
+</update>
+
+<update id="deleteMainTask">
+    UPDATE MAIN_TASK
+    SET TASK_STTS_CD = 'B405'
+    WHERE TASK_ID = #{taskId}
+</update>
+
+</mapper>

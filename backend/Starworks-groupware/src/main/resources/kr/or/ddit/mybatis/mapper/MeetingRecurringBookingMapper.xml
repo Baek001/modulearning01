@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자            수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 27.     	임가영            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.MeetingRecurringBookingMapper">
+
+	<resultMap type="kr.or.ddit.vo.MeetingRecurringBookingVO" id="meetingRecurringBookingMap" autoMapping="true">
+		<id property="recurringId" column="RECURRING_ID"/>
+		<collection property="weekCheckList" ofType="string" column="RECURRING_ID" select="selectRecurringWeekdayList">
+		</collection>
+	</resultMap>
+
+	<!-- 회의실 반복예약 신청 전체 조회 -->
+	<select id="selectRecurringBookingList" resultMap="meetingRecurringBookingMap">
+		SELECT
+			RB.RECURRING_ID
+			, RB.ROOM_ID
+			, RB.FREQUENCY
+			, RB.INTERVAL
+			, RB.START_DATE
+			, RB.END_DATE
+			, RB.START_TIME
+			, RB.END_TIME
+			, RB.TITLE
+			, RB.STATUS
+			, RB.REJECT_REASON
+			, RB.USER_ID
+			, RB.CRT_DT
+			, U.USER_NM
+			, RM.ROOM_NAME
+		FROM
+			MEETING_RECURRING_BOOKING RB
+		LEFT JOIN
+			USERS U
+			ON U.USER_ID = RB.USER_ID
+		LEFT JOIN
+			MEETING_ROOM RM
+			ON RM.ROOM_ID = RB.ROOM_ID
+		<trim prefix="where" prefixOverrides="AND |OR">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(userId)">
+				AND RB.USER_ID = #{userId}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(status)">
+				AND RB.STATUS = #{status}
+			</if>
+		</trim>
+		ORDER BY
+			RB.CRT_DT DESC
+	</select>
+
+	<!-- 회의실 진행중인 반복예약 전체 조회 (승인됐으면서, 아직 endDate 날짜가 지나지 않은 것)-->
+	<select id="selectProgressRecurringBookingList" resultMap="meetingRecurringBookingMap">
+	    SELECT
+			RB.RECURRING_ID
+			, RB.ROOM_ID
+			, RB.FREQUENCY
+			, RB.INTERVAL
+			, RB.START_DATE
+			, RB.END_DATE
+			, RB.START_TIME
+			, RB.END_TIME
+			, RB.TITLE
+			, RB.STATUS
+			, RB.REJECT_REASON
+			, RB.USER_ID
+			, RB.CRT_DT
+			, U.USER_NM
+			, RM.ROOM_NAME
+		FROM
+			MEETING_RECURRING_BOOKING RB
+		LEFT JOIN
+			USERS U
+			ON U.USER_ID = RB.USER_ID
+		LEFT JOIN
+			MEETING_ROOM RM
+			ON RM.ROOM_ID = RB.ROOM_ID
+		<![CDATA[
+	        WHERE
+	            END_DATE::date >= CURRENT_DATE
+	        AND
+	            RB.STATUS = 'A401'
+	     ]]>
+	</select>
+
+	<!-- 회의실 반복예약 신청 단건 조회 -->
+	<select id="selectRecurringBooking" resultMap="meetingRecurringBookingMap">
+		SELECT
+			RECURRING_ID
+			, ROOM_ID
+			, FREQUENCY
+			, INTERVAL
+			, START_DATE
+			, END_DATE
+			, START_TIME
+			, END_TIME
+			, TITLE
+			, STATUS
+			, REJECT_REASON
+			, USER_ID
+			, CRT_DT
+		FROM
+			MEETING_RECURRING_BOOKING
+		WHERE
+			RECURRING_ID = #{recurringId}
+	</select>
+
+	<!-- 회의실 반복예약 등록 -->
+	<insert id="insertRecurringBooking">
+		<selectKey keyProperty="recurringId" order="BEFORE" resultType="Integer">
+			SELECT nextval('MEETING_RECURRING_BOOKING_SEQ')
+		</selectKey>
+		INSERT INTO
+			MEETING_RECURRING_BOOKING (
+				RECURRING_ID
+				, ROOM_ID
+				, FREQUENCY
+				, INTERVAL
+				, START_DATE
+				, END_DATE
+				, START_TIME
+				, END_TIME
+				, TITLE
+				, USER_ID
+			) VALUES (
+				#{recurringId}
+				, #{roomId}
+				, #{frequency}
+				, #{interval}
+				, #{startDate}
+				, #{endDate}
+				, #{startTime}
+				, #{endTime}
+				, #{title}
+				, #{userId}
+			)
+	</insert>
+
+	<!-- 회의실 반복예약 정보 수정 -->
+	<update id="updateRecurringBooking">
+		UPDATE
+			MEETING_RECURRING_BOOKING
+		SET
+		<trim prefix="" prefixOverrides=",">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(status)">
+				, STATUS = #{status}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(rejectReason)">
+				, REJECT_REASON = #{rejectReason}
+			</if>
+		</trim>
+		WHERE
+			RECURRING_ID = #{recurringId}
+	</update>
+
+	<!-- 회의실 반복예약 삭제 -->
+	<delete id="deleteRecurringBooking">
+		DELETE FROM
+			MEETING_RECURRING_BOOKING
+		WHERE
+			RECURRING_ID = #{recurringId}
+	</delete>
+
+	<!-- ////////////// 반복예약 반복 요일 관련 //////////////  -->
+
+	<select id="selectRecurringWeekdayList" resultType="string">
+		SELECT
+			WEEKDAY
+		FROM
+			MEETING_RECURRING_WEEKDAY
+		WHERE
+			RECURRING_ID = #{recurringId}
+	</select>
+
+	<insert id="insertRecurringWeekday">
+		INSERT INTO
+			MEETING_RECURRING_WEEKDAY (
+				RECURRING_ID
+				, WEEKDAY
+			) VALUES (
+				#{recurringId}
+				, #{weekday}
+			)
+	</insert>
+
+	<delete id="deleteRecurringWeekday">
+		DELETE FROM
+			MEETING_RECURRING_WEEKDAY
+		WHERE
+			RECURRING_ID = #{recurringId}
+	</delete>
+
+</mapper>

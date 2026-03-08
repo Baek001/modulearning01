@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	윤서현            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.BusinessTripMapper">
+	<insert id="insertBusinessTrip">
+		INSERT INTO BUSINESS_TRIP(
+			BZTR_SQN
+			,ATRZ_DOC_ID
+			,BZTR_USER_ID
+			,BZTR_CD
+			,BZTR_BGNG_DT
+			,BZTR_END_DT
+			,ALLDAY
+			,BZTR_EXPLN
+		)VALUES(
+		 	#{bztrSqn}
+			 ,#{atrzDocId}
+			 ,#{bztrUserId}
+			 ,#{bztrCd}
+			 ,#{bztrBgngDt}
+			 ,#{bztrEndDt}
+			 ,#{allday}
+			 ,#{bztrExpln}
+		)
+		
+	</insert>
+	
+	<select id="selectBusinessTripList" resultType="kr.or.ddit.vo.BusinessTripVO">
+		SELECT
+			BZTR_SQN
+			,ATRZ_DOC_ID
+			,BZTR_USER_ID
+			,BZTR_CD
+			,BZTR_BGNG_DT
+			,BZTR_END_DT
+			,ALLDAY
+			,BZTR_EXPLN
+		FROM
+			BUSINESS_TRIP
+	</select>
+	
+	<select id="selectBusinessTrip" resultType="kr.or.ddit.vo.BusinessTripVO">
+		SELECT
+			BZTR_SQN
+			,ATRZ_DOC_ID
+			,BZTR_USER_ID
+			,BZTR_CD
+			,BZTR_BGNG_DT
+			,BZTR_END_DT
+			,ALLDAY
+			,BZTR_EXPLN
+		FROM
+			BUSINESS_TRIP
+		WHERE
+			BZTR_SQN=${bztrSqn}
+	</select>
+</mapper>

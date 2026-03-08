@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.MyPageMapper" >
+
+    <update id="updateUserInfo" parameterType="kr.or.ddit.vo.UsersVO">
+        UPDATE USERS
+        <set>
+            USER_NM = #{userNm},
+            USER_TELNO = #{userTelno},
+            EXT_TEL = #{extTel},
+            USER_EMAIL = #{userEmail}
+            <if test="userImgFileId != null and userImgFileId != ''">
+                , USER_IMG_FILE_ID = #{userImgFileId}
+            </if>
+        </set>
+            WHERE USER_ID = #{userId}
+    </update>
+
+    <update id="updateUserPassword">
+        UPDATE USERS
+        SET USER_PSWD = #{encodedPassword}
+        WHERE USER_ID = #{userId}
+    </update>
+</mapper>

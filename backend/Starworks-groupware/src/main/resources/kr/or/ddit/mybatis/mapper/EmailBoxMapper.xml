@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	홍현택           쿼리 작성
+ *	2025.10. 10. 		홍현택			메일함 목록 가져오기
+ *	2025.10. 13. 		홍현택			임시저장함 목록 가져오기
+ *
+-->
+
+
+<!--
+    전체 메일함 목록 조회
+    - 모든 사용자 메일함 구조 조회
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.EmailBoxMapper">
+	<select id="selectEmailBoxList" resultType="kr.or.ddit.vo.EmailBoxVO">
+		SELECT
+		MAILBOX_ID
+	,UP_MAILBOX_ID
+	,USER_ID
+	,MAILBOX_TYPE_CD
+	,MAILBOX_NM
+	,SORT_NUM
+	,DEL_YN
+	FROM EMAIL_BOX
+</select>
+
+<!--
+    단일 메일함 조회
+    - MAILBOX_ID 기준으로 특정 메일함 상세 조회
+-->
+	<select id="selectEmailBox" resultType="kr.or.ddit.vo.EmailBoxVO">
+		SELECT
+		MAILBOX_ID
+		,UP_MAILBOX_ID
+		,USER_ID
+		,MAILBOX_TYPE_CD
+		,MAILBOX_NM
+		,SORT_NUM
+		,DEL_YN
+		FROM EMAIL_BOX
+		WHERE MAILBOX_ID =#{mailboxId}
+	</select>
+
+<!--
+    메일 검색 조건 SQL Fragment
+    - 제목, 보낸이, 받는이, 내용, 기간 필터 공통 처리
+-->
+  <sql id="searchCondition">
+        <if test="paging.simpleSearch.searchType != null and paging.simpleSearch.searchWord != null and paging.simpleSearch.searchWord != ''">
+            <choose>
+                <when test="paging.simpleSearch.searchType == 'subject'">
+                    AND EC.SUBJECT LIKE '%' || #{paging.simpleSearch.searchWord} || '%'
+                </when>
+                <when test="paging.simpleSearch.searchType == 'sender'">
+                    AND U_SENDER.USER_NM LIKE '%' || #{paging.simpleSearch.searchWord} || '%'
+                </when>
+                <when test="paging.simpleSearch.searchType == 'receiver'">
+                    AND U_RECEIVER.USER_NM LIKE '%' || #{paging.simpleSearch.searchWord} || '%'
+                </when>
+                <when test="paging.simpleSearch.searchType == 'content'">
+                    AND EC.CONTENT LIKE '%' || #{paging.simpleSearch.searchWord} || '%'
+                </when>
+            </choose>
+        </if>
+        <if test="paging.simpleSearch.startDate != null and paging.simpleSearch.startDate != ''">
+            AND EC.SEND_DATE &gt;= TO_DATE(#{paging.simpleSearch.startDate}, 'YYYY-MM-DD')
+        </if>
+        <if test="paging.simpleSearch.endDate != null and paging.simpleSearch.endDate != ''">
+            AND EC.SEND_DATE &lt; (TO_DATE(#{paging.simpleSearch.endDate}, 'YYYY-MM-DD') + INTERVAL '1 day')
+        </if>
+    </sql>
+
+<!--
+    메일 목록 페이징 조회
+    - 메일함 유형 에 따라 분기
+    - 중요메일 여부(IS_USER_IMPORTANT) 포함
+    - 검색 조건 및 정렬 적용
+-->
+<select id="selectEmailList" resultType="kr.or.ddit.vo.EmailContentVO">
+    SELECT
+        B.*
+    FROM (
+        SELECT
+            A.*
+            , ROW_NUMBER() OVER () AS RNUM
+        FROM (
+            <choose>
+				<when test="mailboxTypeCd == 'G101'">
+						  SELECT DISTINCT
+						      EC.EMAIL_CONT_ID
+						    , EC.USER_ID
+						    , EC.SUBJECT
+						    , EC.SEND_DATE
+						    , EC.MAIL_FILE_ID
+						    , EM.READ_YN
+						    , EC.IMPT_MAIL_YN
+						    , (
+						        SELECT CASE WHEN COUNT(EM_IMPT.EMAIL_CONT_ID) > 0 THEN 'Y' ELSE 'N' END
+						        FROM EMAIL_MAPPING EM_IMPT
+						        WHERE EM_IMPT.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+						          AND EM_IMPT.MAILBOX_ID = (
+						              SELECT MAILBOX_ID
+						              FROM EMAIL_BOX
+						              WHERE USER_ID = #{userId}
+						                AND MAILBOX_TYPE_CD = 'G104'
+						          )
+						      ) AS IS_USER_IMPORTANT
+						    , U_SENDER.USER_NM AS SENDER_NAME
+						  FROM EMAIL_BOX EB
+						  INNER JOIN EMAIL_MAPPING EM
+						    ON EB.MAILBOX_ID = EM.MAILBOX_ID
+						  INNER JOIN EMAIL_CONTENT EC
+						    ON EM.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+						  INNER JOIN EMAIL_SENDER_PARTY ESP
+						    ON EC.EMAIL_CONT_ID = ESP.EMAIL_CONT_ID
+						  INNER JOIN USERS U_SENDER
+						    ON ESP.USER_ID = U_SENDER.USER_ID
+						  WHERE EB.USER_ID = #{userId}
+						    AND EB.MAILBOX_TYPE_CD = #{mailboxTypeCd}
+						    AND EM.DEL_YN = 'N'
+						  <include refid="searchCondition"/>
+						  ORDER BY
+						      EM.READ_YN ASC,
+						      EC.SEND_DATE DESC
+						</when>
+
+                <when test="mailboxTypeCd == 'G102'">
+                    SELECT DISTINCT
+                        EC.EMAIL_CONT_ID
+                        , EC.USER_ID
+                        , EC.SUBJECT
+                        , EC.SEND_DATE
+                        , EC.MAIL_FILE_ID
+                        , EM.READ_YN
+                        , EC.IMPT_MAIL_YN
+                        , (
+                            SELECT
+                                CASE WHEN COUNT(EM_IMPT.EMAIL_CONT_ID) > 0 THEN 'Y' ELSE 'N' END
+                            FROM EMAIL_MAPPING EM_IMPT
+                            WHERE EM_IMPT.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                              AND EM_IMPT.MAILBOX_ID = (
+                                  SELECT MAILBOX_ID
+                                  FROM EMAIL_BOX
+                                  WHERE USER_ID = #{userId}
+                                    AND MAILBOX_TYPE_CD = 'G104'
+                              )
+                          ) AS IS_USER_IMPORTANT
+                        , (
+                            SELECT
+                                STRING_AGG(U.USER_NM, ', ' ORDER BY U.USER_NM)
+                            FROM EMAIL_RECEIVER ER_SUB
+                            JOIN USERS U
+                              ON ER_SUB.USER_ID = U.USER_ID
+                            WHERE ER_SUB.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                          ) AS SENDER_NAME
+                    FROM EMAIL_BOX EB
+                    INNER JOIN EMAIL_MAPPING EM
+                      ON EB.MAILBOX_ID = EM.MAILBOX_ID
+                    INNER JOIN EMAIL_CONTENT EC
+                      ON EM.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                    LEFT OUTER JOIN EMAIL_SENDER_PARTY ESP
+                      ON EC.EMAIL_CONT_ID = ESP.EMAIL_CONT_ID
+                    LEFT OUTER JOIN USERS U_SENDER
+                      ON ESP.USER_ID = U_SENDER.USER_ID
+                    WHERE EB.USER_ID = #{userId}
+                      AND EB.MAILBOX_TYPE_CD = #{mailboxTypeCd}
+                      AND EM.DEL_YN = 'N'
+                    <include refid="searchCondition"/>
+                    ORDER BY
+                        EM.READ_YN ASC, EC.SEND_DATE DESC
+                </when>
+                <when test="mailboxTypeCd == 'G103'">
+                    SELECT DISTINCT
+                        EC.EMAIL_CONT_ID
+                        , EC.USER_ID
+                        , EC.SUBJECT
+                        , EC.SEND_DATE
+                        , EC.MAIL_FILE_ID
+                        , EM.READ_YN
+                        , EC.IMPT_MAIL_YN
+                        , (
+                            SELECT
+                                CASE WHEN COUNT(EM_IMPT.EMAIL_CONT_ID) > 0 THEN 'Y' ELSE 'N' END
+                            FROM EMAIL_MAPPING EM_IMPT
+                            WHERE EM_IMPT.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                              AND EM_IMPT.MAILBOX_ID = (
+                                  SELECT MAILBOX_ID
+                                  FROM EMAIL_BOX
+                                  WHERE USER_ID = #{userId}
+                                    AND MAILBOX_TYPE_CD = 'G104'
+                              )
+                          ) AS IS_USER_IMPORTANT
+                        , U.USER_NM AS SENDER_NAME
+                    FROM EMAIL_BOX EB
+                    INNER JOIN EMAIL_MAPPING EM
+                      ON EB.MAILBOX_ID = EM.MAILBOX_ID
+                    INNER JOIN EMAIL_CONTENT EC
+                      ON EM.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                    INNER JOIN USERS U
+                      ON EB.USER_ID = U.USER_ID
+                    LEFT OUTER JOIN EMAIL_SENDER_PARTY ESP
+                      ON EC.EMAIL_CONT_ID = ESP.EMAIL_CONT_ID
+                    LEFT OUTER JOIN USERS U_SENDER
+                      ON ESP.USER_ID = U_SENDER.USER_ID
+                    LEFT OUTER JOIN EMAIL_RECEIVER ER
+                      ON EC.EMAIL_CONT_ID = ER.EMAIL_CONT_ID
+                    LEFT OUTER JOIN USERS U_RECEIVER
+                      ON ER.USER_ID = U_RECEIVER.USER_ID
+                    WHERE EB.USER_ID = #{userId}
+                      AND EB.MAILBOX_TYPE_CD = #{mailboxTypeCd}
+                      AND EM.DEL_YN = 'N'
+                    <include refid="searchCondition"/>
+                    ORDER BY
+                        EC.SEND_DATE DESC
+                </when>
+                <otherwise>
+                    SELECT DISTINCT
+                        EC.EMAIL_CONT_ID
+                        , EC.USER_ID
+                        , EC.SUBJECT
+                        , EC.SEND_DATE
+                        , EC.MAIL_FILE_ID
+                        , EM.READ_YN
+                        , EC.IMPT_MAIL_YN
+                        , (
+                            SELECT
+                                CASE WHEN COUNT(EM_IMPT.EMAIL_CONT_ID) > 0 THEN 'Y' ELSE 'N' END
+                            FROM EMAIL_MAPPING EM_IMPT
+                            WHERE EM_IMPT.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                              AND EM_IMPT.MAILBOX_ID = (
+                                  SELECT MAILBOX_ID
+                                  FROM EMAIL_BOX
+                                  WHERE USER_ID = #{userId}
+                                    AND MAILBOX_TYPE_CD = 'G104'
+                              )
+                          ) AS IS_USER_IMPORTANT
+                        , U_SENDER.USER_NM AS SENDER_NAME
+                    FROM EMAIL_BOX EB
+                    INNER JOIN EMAIL_MAPPING EM
+                      ON EB.MAILBOX_ID = EM.MAILBOX_ID
+                    INNER JOIN EMAIL_CONTENT EC
+                      ON EM.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+                    INNER JOIN EMAIL_SENDER_PARTY ESP
+                      ON EC.EMAIL_CONT_ID = ESP.EMAIL_CONT_ID
+                    INNER JOIN USERS U_SENDER
+                      ON ESP.USER_ID = U_SENDER.USER_ID
+                    WHERE EB.USER_ID = #{userId}
+                      AND EB.MAILBOX_TYPE_CD = #{mailboxTypeCd}
+                      AND EM.DEL_YN = 'N'
+                    <include refid="searchCondition"/>
+                    ORDER BY
+                        EC.SEND_DATE DESC
+                </otherwise>
+
+            </choose>
+        ) A
+    ) B
+    WHERE RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+</select>
+
+<!--
+    메일 총 개수 조회 (페이징 total count)
+-->
+	<select id="selectEmailListCount" resultType="int">
+	    SELECT COUNT(DISTINCT EC.EMAIL_CONT_ID)
+	    FROM
+	        EMAIL_BOX EB
+	    INNER JOIN
+	        EMAIL_MAPPING EM ON EB.MAILBOX_ID = EM.MAILBOX_ID
+	    INNER JOIN
+	        EMAIL_CONTENT EC ON EM.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+	    LEFT OUTER JOIN
+	        EMAIL_SENDER_PARTY ESP ON EC.EMAIL_CONT_ID = ESP.EMAIL_CONT_ID
+	    LEFT OUTER JOIN
+	        USERS U_SENDER ON ESP.USER_ID = U_SENDER.USER_ID
+	    WHERE
+	        EB.USER_ID = #{userId}
+	    AND
+	        EB.MAILBOX_TYPE_CD = #{mailboxTypeCd}
+	    AND
+	        EM.DEL_YN = 'N'
+	    <include refid="searchCondition"></include>
+	</select>
+
+<!--
+    읽지 않은 메일 개수 조회
+    READ_YN = 'N' 기준
+-->
+	<select id="selectUnreadEmailCount" resultType="int">
+	    SELECT COUNT(DISTINCT EC.EMAIL_CONT_ID)
+	    FROM
+	        EMAIL_BOX EB
+	    INNER JOIN
+	        EMAIL_MAPPING EM ON EB.MAILBOX_ID = EM.MAILBOX_ID
+	    INNER JOIN
+	        EMAIL_CONTENT EC ON EM.EMAIL_CONT_ID = EC.EMAIL_CONT_ID
+	    WHERE
+	        EB.USER_ID = #{userId}
+	    AND
+	        EB.MAILBOX_TYPE_CD = #{mailboxTypeCd}
+	    AND
+	        EM.DEL_YN = 'N'
+	    AND
+	        EM.READ_YN = 'N'
+	</select>
+
+<!--
+    사용자 + 메일함 유형으로 MAILBOX_ID 조회
+    메일 저장 시 대상 메일함 식별
+-->
+	<select id="findMailboxIdByUserIdAndType" parameterType="java.util.Map" resultType="string">
+		SELECT MAILBOX_ID
+		FROM EMAIL_BOX
+		WHERE USER_ID = #{userId} AND MAILBOX_TYPE_CD = #{mailboxTypeCd}
+	</select>
+</mapper>

@@ -1,0 +1,80 @@
+﻿services:
+  db:
+    image: postgres:16-alpine
+    container_name: starworks-db
+    environment:
+      POSTGRES_DB: starworks
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "${STARWORKS_DB_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/docker/initdb/10-init.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
+      - ./db/migration-input/ddl:/docker-entrypoint-initdb-seed:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend/Starworks-groupware
+      dockerfile: Dockerfile
+    container_name: starworks-backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/starworks
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DRIVER: org.postgresql.Driver
+      JWT_SECRET_KEY: local-dev-jwt-secret-key-please-change
+      AWS_ACCESS_KEY: local
+      AWS_SECRET_KEY: local
+      AWS_REGION: ap-northeast-2
+      AWS_BUCKET: local-bucket
+      SPRING_AI_VERTEX_AI_GEMINI_PROJECT_ID: local-dev-project
+      SPRING_AI_VERTEX_AI_GEMINI_LOCATION: us-central1
+      SPRING_AI_VERTEX_AI_EMBEDDING_PROJECT_ID: local-dev-project
+      SPRING_AI_VERTEX_AI_EMBEDDING_LOCATION: us-central1
+      SPRING_MAIN_LAZY_INITIALIZATION: "true"
+      SERVER_PORT: "18080"
+      CORS_ALLOW_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      COOKIE_SECURE: "false"
+      COOKIE_SAME_SITE: Lax
+      APP_FRONTEND_BASE_URL: http://localhost:5173
+      FILE_STORAGE_MODE: local
+      FILE_STORAGE_PATH: file:/data/starworks_medias/
+      FILE_STORAGE_URL: /starworks_medias
+      FORWARD_HEADERS_STRATEGY: framework
+    volumes:
+      - starworks_medias:/data/starworks_medias
+    ports:
+      - "${STARWORKS_BACKEND_PORT:-18080}:18080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSI http://localhost:18080/ > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: starworks-frontend
+    ports:
+      - "${STARWORKS_FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  starworks_medias:
+
+

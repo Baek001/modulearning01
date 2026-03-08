@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 26.     	장어진            최초 생성
+ *  2025. 9. 27.     	장어진            쿼리 수정
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.FullCalendarDeptMapper">
+	<select id="selectFullCalendarDeptList" resultType="kr.or.ddit.dto.FullCalendarDeptDTO">
+		SELECT
+		    FCD.EVENT_ID,
+		    FCD.EVENT_TYPE,
+		    FCD.TITLE,
+		    FCD.START_DT,
+		    FCD.END_DT,
+		    FCD.ALLDAY,
+		    FCD.DESCRIPTION,
+		    FCD.USER_ID,
+		    FCD.USER_NM,
+		    FCD.DEPT_ID,
+		    FCD.TYPE
+		FROM FULLCALENDAR_DEPT FCD
+		LEFT OUTER JOIN (
+		    WITH RECURSIVE DEPT_TREE AS (
+		        SELECT DEPT_ID, UP_DEPT_ID
+		        FROM DEPARTMENT
+		        WHERE DEPT_ID = #{deptId}
+		        UNION ALL
+		        SELECT D.DEPT_ID, D.UP_DEPT_ID
+		        FROM DEPARTMENT D
+		        JOIN DEPT_TREE DT ON D.UP_DEPT_ID = DT.DEPT_ID
+		    )
+		    SELECT DEPT_ID
+		    FROM DEPT_TREE
+		) D ON FCD.DEPT_ID = D.DEPT_ID
+		WHERE FCD.USER_ID = #{userId}
+		   OR D.DEPT_ID IS NOT NULL
+		ORDER BY FCD.START_DT
+	</select>
+</mapper>

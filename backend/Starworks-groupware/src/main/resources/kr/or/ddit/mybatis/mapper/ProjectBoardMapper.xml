@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *  2025. 9. 26.     	장어진            INSERT SQL문 수정
+ *  2025.10. 02.     	장어진            기능 제작을 위한 각종 SQL문 추가
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.ProjectBoardMapper">
+	<resultMap type="kr.or.ddit.vo.ProjectBoardVO" id="projectBoardMap" autoMapping="true">
+		<association property="users" javaType="kr.or.ddit.vo.UsersVO" autoMapping="true"></association>
+	</resultMap>
+
+	<!-- 프로젝트 게시판 검색 sql 조각 -->
+	<sql id="projectBoardSimpleSearchFrag">
+		<where>
+			<if test="paging.simpleSearch neq null">
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(paging.simpleSearch.searchWord)">
+					<choose>
+						<when test='paging.simpleSearch.searchType eq "title"'>
+							PST_TTL LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</when>
+						<when test='paging.simpleSearch.searchType eq "content"'>
+							CONTENTS LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</when>
+						<when test='paging.simpleSearch.searchType eq "writer"'>
+							USER_NM LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</when>
+						<otherwise>
+							PST_TTL LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+							OR
+							CONTENTS LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+							OR
+							USER_NM LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+						</otherwise>
+					</choose>
+				</if>
+			</if>
+		</where>
+	</sql>
+
+	<sql id="projectBoardList">
+		SELECT
+			PB.BIZ_PST_ID
+			, PB.BIZ_ID
+			, PB.PST_TTL
+			, PB.CONTENTS
+			, PB.VIEW_CNT
+			, PB.DEL_YN
+			, PB.NOTICE_YN
+			, PB.CRT_USER_ID
+			, PB.FRST_CRT_DT
+			, PB.LAST_CHG_USER_ID
+			, PB.LAST_CHG_DT
+			, PB.BIZ_PST_FILE_ID
+			, U.USER_NM
+		FROM
+			PROJECT_BOARD PB
+				LEFT OUTER JOIN USERS U ON (U.USER_ID = PB.CRT_USER_ID)
+		WHERE
+			PB.BIZ_ID = #{bizId}
+			AND PB.DEL_YN = 'N'
+		ORDER BY
+			CASE WHEN PB.NOTICE_YN = 'Y' THEN 0 ELSE 1 END
+			, PB.FRST_CRT_DT DESC
+	</sql>
+
+	<!-- 조회수 증가 -->
+	<update id="updateViewCnt">
+		UPDATE
+			PROJECT_BOARD
+		SET
+		   VIEW_CNT = VIEW_CNT + 1
+		WHERE
+		   BIZ_PST_ID = #{bizPstId}
+	</update>
+
+	<select id="selectProjectBoardTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		FROM ( <include refid="projectBoardList" /> )
+		<include refid="projectBoardSimpleSearchFrag" />
+	</select>
+
+	<select id="selectProjectBoardListPaging" resultMap="projectBoardMap">
+		WITH CMV as (
+			SELECT ROW_NUMBER() OVER () AS RNUM, PBU.*
+			FROM (
+				<include refid="projectBoardList" />
+			) PBU
+			<include refid="projectBoardSimpleSearchFrag" />
+		)
+		SELECT *
+		FROM
+			CMV
+		WHERE
+			RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+	</select>
+
+	<select id="selectProjectBoardListNonPaging" resultType="kr.or.ddit.vo.ProjectBoardVO">
+		<include refid="projectBoardList" />
+	</select>
+
+	<select id="selectProjectBoard" resultMap="projectBoardMap">
+		SELECT
+			PB.BIZ_PST_ID
+			, PB.BIZ_ID
+			, PB.PST_TTL
+			, PB.CONTENTS
+			, PB.VIEW_CNT
+			, PB.DEL_YN
+			, PB.NOTICE_YN
+			, PB.CRT_USER_ID
+			, PB.FRST_CRT_DT
+			, PB.LAST_CHG_USER_ID
+			, PB.LAST_CHG_DT
+			, PB.BIZ_PST_FILE_ID
+			, U.USER_NM
+		FROM
+			PROJECT_BOARD PB
+				LEFT OUTER JOIN USERS U ON (U.USER_ID = PB.CRT_USER_ID)
+		WHERE
+			PB.BIZ_PST_ID = #{bizPstId}
+	</select>
+
+	<insert id="insertProjectBoard">
+		<selectKey order="BEFORE" resultType="String" keyProperty="bizPstId">
+		<![CDATA[
+			SELECT (
+			    SELECT T1.biz_id FROM project T1 WHERE T1.biz_id = #{bizId}
+			) || LPAD(COALESCE(SUBSTR(T2.biz_pst_id_max, -6) + 1, 1), 6, '0') AS biz_pst_id
+			FROM (
+			    SELECT MAX(biz_pst_id) AS biz_pst_id_max
+			    FROM project_board
+			    WHERE biz_pst_id >= (SELECT biz_id FROM project WHERE biz_id = #{bizId}) || '000000'
+			      AND biz_pst_id < (SELECT biz_id FROM project WHERE biz_id = #{bizId}) || '999999'
+			) T2
+		]]>
+		</selectKey>
+		INSERT INTO PROJECT_BOARD (
+			BIZ_PST_ID
+			, BIZ_ID
+			, PST_TTL
+			, CONTENTS
+			, NOTICE_YN
+			, CRT_USER_ID
+			, FRST_CRT_DT
+			, BIZ_PST_FILE_ID
+		) VALUES (
+			#{bizPstId}
+			, #{bizId}
+			, #{pstTtl}
+			, #{contents}
+			, #{noticeYn}
+			, #{crtUserId}
+			, CURRENT_TIMESTAMP
+			, #{bizPstFileId}
+		)
+	</insert>
+	<update id="updateProjectBoard" parameterType="kr.or.ddit.vo.ProjectBoardVO">
+		UPDATE PROJECT_BOARD
+		SET
+			PST_TTL = #{pstTtl}
+			, CONTENTS = #{contents}
+			, LAST_CHG_USER_ID = #{lastChgUserId}
+			, LAST_CHG_DT = CURRENT_TIMESTAMP
+			, NOTICE_YN = #{noticeYn}
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(bizPstFileId)">
+			, BIZ_PST_FILE_ID = #{bizPstFileId}
+			</if>
+		WHERE
+			BIZ_PST_ID = #{bizPstId}
+	</update>
+	<update id="deleteProjectBoard" parameterType="String">
+		UPDATE PROJECT_BOARD
+		SET
+			DEL_YN = 'Y'
+		WHERE
+			BIZ_PST_ID = #{bizPstId}
+	</update>
+</mapper>

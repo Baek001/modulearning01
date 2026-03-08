@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 18.     	윤서현            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.MeetingRoomMapper">
+	<select id="selectMeetingRoom" resultType="kr.or.ddit.vo.MeetingRoomVO">
+		SELECT
+			ROOM_ID
+			,ROOM_NAME
+			,USE_YN
+			,LOCATION
+			,CAPACITY
+			,DEL_YN
+			,DEL_DT
+		FROM
+			MEETING_ROOM
+		WHERE
+			ROOM_ID = #{roomId}
+		AND
+			DEL_YN = 'N'
+	</select>
+
+	<select id="selectMeetingRoomList" resultType="kr.or.ddit.vo.MeetingRoomVO">
+		SELECT
+			ROW_NUMBER() OVER () AS RNUM, R.*
+		FROM (
+				SELECT
+					ROOM_ID
+					,ROOM_NAME
+					,USE_YN
+					,LOCATION
+					,CAPACITY
+				FROM
+					MEETING_ROOM
+				WHERE
+					DEL_YN = 'N'
+				ORDER BY
+					ROOM_ID
+			)R
+	</select>
+
+	<!-- 신규 회의실 등록 -->
+	<insert id="insertMeetingRoom">
+		<selectKey keyProperty="roomId" order="BEFORE" resultType="String">
+			SELECT
+			    'ROOM' || LPAD((COALESCE(MAX(CAST(SUBSTRING(room_id FROM 5) AS INTEGER)), 0) + 1)::text, 2, '0')
+			FROM
+			    MEETING_ROOM
+		</selectKey>
+		INSERT INTO
+			MEETING_ROOM (
+				ROOM_ID
+				, ROOM_NAME
+				, LOCATION
+				, CAPACITY
+				, USE_YN
+			) VALUES (
+				#{roomId}
+				, #{roomName}
+				, #{location}
+				, #{capacity}
+				, COALESCE(#{useYn}, 'Y')
+			)
+	</insert>
+
+	<!-- 회의실 정보 업데이트 -->
+	<update id="updateMeetingRoom">
+		UPDATE
+			MEETING_ROOM
+		SET
+			ROOM_NAME = #{roomName}
+			, LOCATION = #{location}
+			, CAPACITY = #{capacity}
+		WHERE
+			ROOM_ID = #{roomId}
+	</update>
+
+	<!-- 회의실 상태 업데이트 -->
+	<update id="updateMeetingRoomStatus">
+		UPDATE
+			MEETING_ROOM
+		SET
+		<trim prefix="" prefixOverrides=",">
+			<if test="useYn != null and @org.apache.commons.lang3.StringUtils@isNotBlank(useYn)">
+				, USE_YN = #{useYn}
+			</if>
+			<if test="delYn != null and @org.apache.commons.lang3.StringUtils@isNotBlank(delYn)">
+				, DEL_YN = #{delYn}
+				, DEL_DT = CURRENT_TIMESTAMP
+			</if>
+		</trim>
+		WHERE
+			ROOM_ID = #{roomId}
+	</update>
+</mapper>

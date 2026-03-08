@@ -1,0 +1,39 @@
+﻿services:
+  backend:
+    build:
+      context: ./backend/Starworks-groupware
+      dockerfile: Dockerfile
+    container_name: starworks-backend-prod
+    env_file:
+      - .env.production
+    environment:
+      DB_DRIVER: org.postgresql.Driver
+      SERVER_PORT: "${SERVER_PORT:-18080}"
+      FILE_STORAGE_MODE: "${FILE_STORAGE_MODE:-local}"
+      FILE_STORAGE_PATH: "${FILE_STORAGE_PATH:-file:/data/starworks_medias/}"
+      FILE_STORAGE_URL: "${FILE_STORAGE_URL:-/starworks_medias}"
+      FORWARD_HEADERS_STRATEGY: framework
+    volumes:
+      - starworks_media:/data/starworks_medias
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSI http://localhost:18080/ > /dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: starworks-frontend-prod
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${STARWORKS_FRONTEND_PORT:-80}:80"
+    restart: unless-stopped
+
+volumes:
+  starworks_media:

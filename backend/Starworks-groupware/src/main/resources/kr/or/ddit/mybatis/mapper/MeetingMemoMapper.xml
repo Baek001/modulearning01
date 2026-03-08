@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 18.     	윤서현            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.MeetingMemoMapper">
+
+	 <select id="selectMeetingMemo" parameterType="int" resultType="kr.or.ddit.vo.MeetingMemoVO">
+        SELECT
+            MEMO_ID
+			,USER_ID
+			,TITLE
+			,CONTENTS
+			,CRT_DT
+        FROM
+        	MEETING_MEMO
+        WHERE
+        	MEMO_ID = #{memoId}
+    </select>
+
+    <select id="selectMeetingMemoList" resultType="kr.or.ddit.vo.MeetingMemoVO">
+        SELECT
+            MEMO_ID
+			,USER_ID
+			,TITLE
+			,CONTENTS
+			,CRT_DT
+        FROM
+        	MEETING_MEMO
+        <trim prefix="WHERE" prefixOverrides="AND |OR">
+	        <if test="userId != null">
+	        	AND USER_ID = #{userId}
+	        </if>
+	         <if test="simpleSearch neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleSearch.searchWord)">
+				AND (TITLE LIKE '%'|| #{simpleSearch.searchWord} ||'%'
+					OR CONTENTS LIKE '%'|| #{simpleSearch.searchWord} ||'%' )
+	        </if>
+        </trim>
+        ORDER BY
+        	MEMO_ID DESC
+    </select>
+
+    <insert id="insertMeetingMemo" parameterType="kr.or.ddit.vo.MeetingMemoVO">
+    	<selectKey keyProperty="memoId" resultType="Integer" order="BEFORE">
+    		SELECT nextval('SEQ_MEETING_MEMO')
+    	</selectKey>
+        INSERT INTO MEETING_MEMO (
+            MEMO_ID
+			,USER_ID
+			,TITLE
+			,CONTENTS
+			<if test="crtDt != null">
+				,CRT_DT
+			</if>
+        ) VALUES (
+            #{memoId}
+            ,#{userId}
+            ,#{title}
+            ,#{contents}
+            <if test="crtDt != null">
+            	,#{crtDt, jdbcType=DATE}
+            </if>
+        )
+    </insert>
+
+    <update id="updateMeetingMemo" parameterType="kr.or.ddit.vo.MeetingMemoVO">
+        UPDATE MEETING_MEMO
+        SET
+            USER_ID = #{userId}
+            <if test="title != null">
+            	,TITLE = #{title}
+            </if>
+            <if test="contents != null">
+            	,CONTENTS = #{contents}
+            </if>
+             <if test="crtDt != null">
+            	,CRT_DT = #{crtDt}
+            </if>
+        WHERE
+        	MEMO_ID = #{memoId}
+    </update>
+
+    <delete id="deleteMeetingMemo" parameterType="int">
+        DELETE FROM
+        	MEETING_MEMO
+        WHERE
+        	MEMO_ID = #{memoId}
+    </delete>
+
+
+</mapper>

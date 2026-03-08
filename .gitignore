@@ -1,0 +1,26 @@
+# Node
+node_modules/
+frontend/node_modules/
+cloudflare/node_modules/
+frontend/dist/
+
+# Java / Maven
+backend/Starworks-groupware/target/
+backend/Starworks-groupware/.mvn/wrapper/maven-wrapper.jar
+
+# Env / secrets
+.env
+.env.*
+!.env.production.example
+cloudflare/.dev.vars
+cloudflare/.env*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs / temp
+*.log
+tmp-*.json

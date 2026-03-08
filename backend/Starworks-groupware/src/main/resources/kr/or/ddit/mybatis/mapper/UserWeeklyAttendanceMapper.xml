@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.UserWeeklyAttendanceMapper">
+	<select id="selectUserWeeklyAttendance" resultType="kr.or.ddit.dto.UserWeeklyAttendanceDTO">
+		SELECT
+			USER_ID
+			, USER_NM
+			, WORK_WEEK_START_DATE
+			, WORK_DAYS
+			, TOTAL_WORK_HR
+			, LATE_COUNT
+			, EARLY_COUNT
+			, OVERTIME_COUNT
+			, TOTAL_OVERTIME_HR
+			, DEPT_NM
+			, JBGD_NM
+		FROM
+			USER_WEEKLY_ATTENDANCE
+		WHERE
+			USER_ID = #{userId}
+			AND WORK_WEEK_START_DATE = #{workWeekStartDate}
+	</select>
+</mapper>

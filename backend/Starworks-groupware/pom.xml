@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.5.5</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>kr.or.ddit</groupId>
+	<artifactId>Starworks-Groupware</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Starworks-groupware</name>
+	<description>finalproject for Spring Boot</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>21</java.version>
+		<spring-ai.version>1.0.3</spring-ai.version>
+	</properties>
+
+	<dependencies>
+		<!-- Actuator: 헬스체크·메트릭 제공 / 운영 모니터링, 노출시 보안 주의 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- Validation: @Valid 등 Bean 검증 지원 / DTO·설정값 유효성 체크 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!-- Web: MVC + 내장 톰캣 + JSON / REST API·JSP 처리 핵심 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- MyBatis Starter: SqlSessionFactory/매퍼 설정 자동화 / Oracle 연동 매퍼 관리 -->
+		<dependency>
+			<groupId>org.mybatis.spring.boot</groupId>
+			<artifactId>mybatis-spring-boot-starter</artifactId>
+			<version>3.0.5</version>
+		</dependency>
+
+		<!-- DevTools: 핫리로드·자동 재시작 / 개발 편의, 운영 제외 권장 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- PostgreSQL JDBC Driver -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- Temporary rollback support during migration window -->
+		<dependency>
+			<groupId>com.oracle.database.jdbc</groupId>
+			<artifactId>ojdbc11</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Config Processor: 프로퍼티 메타데이터 생성 / IDE 자동완성 지원 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-configuration-processor</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Test Starter: JUnit5·Mockito 포함 / 통합·단위 테스트 환경 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- MyBatis Test: @MybatisTest 등 제공 / 매퍼 단위 테스트 지원 -->
+		<dependency>
+			<groupId>org.mybatis.spring.boot</groupId>
+			<artifactId>mybatis-spring-boot-starter-test</artifactId>
+			<version>3.0.5</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- P6Spy: SQL 로그 치환 출력 / 개발용 쿼리 디버깅 -->
+		<dependency>
+			<groupId>com.github.gavlyukovskiy</groupId>
+			<artifactId>p6spy-spring-boot-starter</artifactId>
+			<version>1.12.0</version>
+		</dependency>
+
+		<!-- Jasper: JSP 컴파일 / 내장 톰캣 JSP 실행 -->
+		<dependency>
+			<groupId>org.apache.tomcat.embed</groupId>
+			<artifactId>tomcat-embed-jasper</artifactId>
+		</dependency>
+		<!-- JSTL API: JSP JSTL 태그 API / Jakarta 네임스페이스 지원 -->
+		<dependency>
+			<groupId>jakarta.servlet.jsp.jstl</groupId>
+			<artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
+		</dependency>
+		<!-- JSTL Impl: JSTL 구현체 / JSP 태그 실제 실행 -->
+		<dependency>
+			<groupId>org.glassfish.web</groupId>
+			<artifactId>jakarta.servlet.jsp.jstl</artifactId>
+		</dependency>
+
+		<!-- SiteMesh: 레이아웃·데코레이터 / JSP UI 공통틀 관리 -->
+		<dependency>
+			<groupId>org.sitemesh</groupId>
+			<artifactId>sitemesh</artifactId>
+			<version>3.2.1</version>
+		</dependency>
+
+		<!-- Commons Lang: StringUtils 등 / 자바 표준 유틸 보강 -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+		<!-- Commons IO: 파일·스트림 유틸 / 입출력 처리 보조 -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.20.0</version>
+		</dependency>
+
+		<!-- Security Starter: 인증·인가 필터체인 / 사용자 로그인·권한 관리 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<!-- Security Test: WithMockUser 등 / 보안 테스트 유틸 -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Security Taglibs: JSP <sec:authorize> 지원 / JSP 권한 제어 태그 -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-taglibs</artifactId>
+		</dependency>
+		<!-- Oauth2 의존성 (10.20 현택 추가) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+		</dependency>
+
+		<!-- springdoc-openapi: Swagger UI 자동 문서화 / API 명세 제공 -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.13</version>
+		</dependency>
+
+		<!-- openhtmltopdf 핵심 모듈
+         HTML/CSS 파싱과 PDF 렌더링의 공통 로직 제공 -->
+		<dependency>
+			<groupId>io.github.openhtmltopdf</groupId>
+			<artifactId>openhtmltopdf-core</artifactId>
+			<version>1.1.31</version>
+		</dependency>
+
+		<!-- PDFBox 기반 렌더링 백엔드
+         core 모듈이 파싱한 결과를 실제 PDF 파일로 출력 -->
+		<dependency>
+			<groupId>io.github.openhtmltopdf</groupId>
+			<artifactId>openhtmltopdf-pdfbox</artifactId>
+			<version>1.1.31</version>
+		</dependency>
+
+	<!-- itextpdf -->
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>forms</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>hyph</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>io</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+        <dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>styled-xml-parser</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>svg</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>html2pdf</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>kernel</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>layout</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>pdfa</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>sign</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+        		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>barcodes</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>font-asian</artifactId>
+			<version>7.1.14</version>
+		</dependency>
+
+		<!-- SLF4J 로깅 브릿지 모듈
+         openhtmltopdf 내부 로그를 SLF4J로 전달 -->
+		<dependency>
+			<groupId>io.github.openhtmltopdf</groupId>
+			<artifactId>openhtmltopdf-slf4j</artifactId>
+			<version>1.1.31</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- AWS SDK 의존성 -->
+		<dependency>
+		    <groupId>software.amazon.awssdk</groupId>
+		    <artifactId>s3</artifactId>
+		    <version>2.22.0</version> <!-- 최신 버전 확인 -->
+		</dependency>
+		<dependency>
+		    <groupId>software.amazon.awssdk</groupId>
+		    <artifactId>auth</artifactId>
+		    <version>2.22.0</version>
+		</dependency>
+
+		<!-- 웹소켓 의존성 (10.07 가영 추가) -->
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+		<!-- Google Authenticator(OTP) (10.21 현택 추가) -->
+		<dependency>
+			<groupId>com.warrenstrange</groupId>
+			<artifactId>googleauth</artifactId>
+			<version>1.5.0</version>
+		</dependency>
+		<!-- AI 기능 -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-vertex-ai-embedding</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-vertex-ai-gemini</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-vector-store</artifactId>
+		</dependency>
+		<!-- Apache POI -->
+		<dependency>
+		    <groupId>org.apache.poi</groupId>
+		    <artifactId>poi-ooxml</artifactId>
+		    <version>5.4.1</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.apache.poi</groupId>
+		    <artifactId>poi</artifactId>
+		    <version>5.4.1</version>
+		</dependency>
+		<!-- Thymeleaf 엔진 -->
+		<!--<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>-->
+		<!-- 스케줄러 추가 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-quartz</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.springframework.boot</groupId>
+							<artifactId>spring-boot-configuration-processor</artifactId>
+						</path>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+			   <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-resources-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>${spring-ai.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+</project>

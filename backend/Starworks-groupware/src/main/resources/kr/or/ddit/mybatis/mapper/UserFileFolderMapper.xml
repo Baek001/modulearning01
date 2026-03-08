@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 10.     	장어진            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.UserFileFolderMapper">
+	<select id="selectFolderList" resultType="kr.or.ddit.vo.UserFileFolderVO">
+		SELECT
+		    FOLDER_SQN
+		    , FOLDER_NM
+		    , UP_FOLDER_SQN
+		    , USER_ID
+		    , CRT_DT
+		    , FOLDER_TYPE
+		FROM
+		    USER_FILE_FOLDER
+		WHERE
+			USER_ID = #{userId}
+			AND DEL_YN = 'N'
+		<choose>
+			<when test="upFolderSqn != null">
+				AND UP_FOLDER_SQN = #{upFolderSqn}
+			</when>
+			<otherwise>
+				AND UP_FOLDER_SQN IS NULL
+			</otherwise>
+		</choose>
+				ORDER BY FOLDER_NM
+	</select>
+
+	<select id="selectAllFolderList" resultType="kr.or.ddit.vo.UserFileFolderVO">
+		SELECT
+		    FOLDER_SQN
+		    , FOLDER_NM
+		    , UP_FOLDER_SQN
+		    , USER_ID
+		    , CRT_DT
+		    , FOLDER_TYPE
+		FROM
+		    USER_FILE_FOLDER
+		WHERE
+			USER_ID = #{userId}
+			AND DEL_YN = 'N'
+		ORDER BY FOLDER_NM
+	</select>
+
+	<select id="selectFolder" resultType="kr.or.ddit.vo.UserFileFolderVO">
+		SELECT
+			FOLDER_SQN
+			, FOLDER_NM
+			, UP_FOLDER_SQN
+			, USER_ID
+			, CRT_DT
+			, DEL_YN
+			, FOLDER_TYPE
+		FROM
+			USER_FILE_FOLDER
+		WHERE
+		<choose>
+			<when test="folderSqn != null">
+				FOLDER_SQN = #{folderSqn}
+			</when>
+			<otherwise>
+				FOLDER_SQN IS NULL
+			</otherwise>
+		</choose>
+	</select>
+
+	<insert id="insertFolderList">
+		<selectKey keyProperty="folderSqn" resultType="int" order="BEFORE">
+			select nextval('FOLDER_SQN_SEQ')
+		</selectKey>
+		INSERT INTO USER_FILE_FOLDER (
+			FOLDER_SQN
+			, FOLDER_NM
+			, UP_FOLDER_SQN
+			, USER_ID
+			, FOLDER_TYPE
+		) VALUES (
+			#{folderSqn}
+			, #{folderNm}
+			, #{upFolderSqn}
+			, #{userId}
+			, #{folderType}
+		)
+	</insert>
+
+	<update id="updateFolderName">
+		UPDATE USER_FILE_FOLDER
+		SET
+			FOLDER_NM = #{folderNm}
+		WHERE
+			FOLDER_SQN = #{folderSqn}
+	</update>
+
+	<update id="updateFolderParent">
+		UPDATE USER_FILE_FOLDER
+		SET
+			UP_FOLDER_SQN = #{upFolderSqn}
+		WHERE
+			FOLDER_SQN = #{folderSqn}
+	</update>
+
+	<update id="deleteFolder">
+		UPDATE USER_FILE_FOLDER
+		SET
+			DEL_YN = 'Y'
+		WHERE
+			FOLDER_SQN = #{folderSqn}
+	</update>
+	
+	<!-- 삭제한 폴더 리스트 조회 -->
+	<select id="selectUserFileFolderNonPagingByDelY" resultType="kr.or.ddit.vo.UserFileFolderVO">
+		SELECT
+		    FOLDER_SQN
+		    , FOLDER_NM
+		    , UP_FOLDER_SQN
+		    , USER_ID
+		    , CRT_DT
+		    , FOLDER_TYPE
+		FROM
+		    USER_FILE_FOLDER
+		WHERE
+			USER_ID = #{userId}
+			AND DEL_YN = 'Y'
+		<choose>
+			<when test="upFolderSqn != null">
+				AND UP_FOLDER_SQN = #{upFolderSqn}
+			</when>
+			<otherwise>
+				AND UP_FOLDER_SQN IS NULL
+			</otherwise>
+		</choose>
+				ORDER BY FOLDER_NM
+	</select>
+	
+	<!-- 복구한 폴더 del Y => N 으로 변경 -->
+	<update id="restoreUserFileFolder">
+		UPDATE
+			USER_FILE_FOLDER
+		SET 
+			DEL_YN = 'N'
+		WHERE 
+			FOLDER_SQN = #{folderSqn}
+	</update>
+	
+	<update id="updateUserFolderMappingByDelY">
+		UPDATE
+			USER_FILE_FOLDER
+		SET 
+			UP_FOLDER_SQN = NULL
+		WHERE 
+			FOLDER_SQN = #{folderSqn}
+	</update>
+</mapper>

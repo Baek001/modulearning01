@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 09.     	김주민            최초 생성
+ *	2025. 10. 09. 		김주민			코멘트 sql 추가 및 수정
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.TaskCommentMapper">
+
+<resultMap type="kr.or.ddit.vo.TaskCommentVO" id="TaskCommentMap" autoMapping="true">
+    <id property="taskCommSqn" column="TASK_COMM_SQN"/>
+    <association property="users" javaType="kr.or.ddit.vo.UsersVO" autoMapping="true"/>
+</resultMap>
+
+<!-- 업무 코멘트 등록 -->
+<insert id="insertTaskComment">
+	<selectKey order="BEFORE" resultType="int" keyProperty="taskCommSqn">
+        SELECT COALESCE(MAX(TASK_COMM_SQN), 0) + 1
+        FROM TASK_COMMENT
+    </selectKey>
+    INSERT INTO TASK_COMMENT (
+        TASK_COMM_SQN
+        , TASK_ID
+        , CONTENTS
+        , CRT_USER_ID
+        , CRT_DT
+    ) VALUES (
+        #{taskCommSqn}
+        , #{taskId}
+        , #{contents}
+        , #{crtUserId}
+        , CURRENT_TIMESTAMP
+    )
+</insert>
+
+<!-- 업무 코멘트 목록 조회 -->
+<select id="selectTaskCommentList" resultMap="TaskCommentMap">
+	SELECT
+         TC.TASK_COMM_SQN
+         , TC.TASK_ID
+         , TC.CONTENTS
+         , TC.CRT_USER_ID
+         , TC.CRT_DT
+         , U.USER_NM
+         , D.DEPT_NM
+     FROM
+         TASK_COMMENT TC
+         INNER JOIN USERS U ON TC.CRT_USER_ID = U.USER_ID
+         LEFT JOIN DEPARTMENT D ON U.DEPT_ID = D.DEPT_ID
+     WHERE
+         TC.TASK_ID = #{taskId}
+     ORDER BY
+         TC.CRT_DT ASC
+</select>
+
+<!-- 업무 코멘트 단건 조회 -->
+<select id="selectTaskComment" resultMap="TaskCommentMap">
+	SELECT
+          TC.TASK_COMM_SQN
+          , TC.TASK_ID
+          , TC.CONTENTS
+          , TC.CRT_USER_ID
+          , TC.CRT_DT
+          , U.USER_NM
+      FROM
+          TASK_COMMENT TC
+          INNER JOIN USERS U ON TC.CRT_USER_ID = U.USER_ID
+      WHERE
+          TC.TASK_COMM_SQN = #{taskCommSqn}
+</select>
+
+<delete id="deleteTaskComment">
+	DELETE FROM TASK_COMMENT
+	WHERE TASK_COMM_SQN = #{taskCommSqn}
+</delete>
+
+</mapper>

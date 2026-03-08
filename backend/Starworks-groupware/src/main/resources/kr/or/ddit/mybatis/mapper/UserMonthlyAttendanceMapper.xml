@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 10. 15.     	장어진            최초 생성
+ *  2025. 10. 16.     	장어진            하위 부서 재귀적 탐색 쿼리 추가 및 수정
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.UserMonthlyAttendanceMapper">
+
+	<select id="selectUserMonthlyAttendanceLateAbsent" resultType="kr.or.ddit.dto.UserMonthlyAttendanceDTO">
+		SELECT
+			U.USER_ID
+		    , U.USER_NM
+		    , UMA.WORK_MONTH
+		    , UMA.WORK_DAYS
+		    , UMA.LATE_COUNT
+		    , UMA.ABSENT_DAYS
+		    , UMA.DEPT_NM
+		    , UMA.JBGD_NM
+		FROM USERS U
+		LEFT OUTER JOIN (
+			WITH RECURSIVE DEPT_TREE AS (
+				SELECT DEPT_ID, UP_DEPT_ID
+				FROM DEPARTMENT
+				WHERE DEPT_ID = #{deptId}
+				UNION ALL
+				SELECT D.DEPT_ID, D.UP_DEPT_ID
+				FROM DEPARTMENT D
+				JOIN DEPT_TREE DT ON D.UP_DEPT_ID = DT.DEPT_ID
+			)
+			SELECT DEPT_ID
+			FROM DEPT_TREE
+			) D ON U.DEPT_ID = D.DEPT_ID
+		LEFT OUTER JOIN USER_MONTHLY_ATTENDANCE UMA
+			ON U.USER_ID = UMA.USER_ID
+			AND UMA.WORK_MONTH = #{workMonth}
+		WHERE
+			D.DEPT_ID IS NOT NULL
+			AND U.RSGNTN_YN = 'N'
+		ORDER BY
+			UMA.ABSENT_DAYS DESC
+			, UMA.LATE_COUNT DESC
+	</select>
+
+	<select id="selectUserMonthlyAttendance" resultType="kr.or.ddit.dto.UserMonthlyAttendanceDTO">
+		SELECT
+			USER_ID
+			, USER_NM
+			, DEPT_ID
+			, WORK_MONTH
+			, WORK_DAYS
+			, TOTAL_WORK_HR
+			, LATE_COUNT
+			, EARLY_COUNT
+			, OVERTIME_COUNT
+			, TOTAL_OVERTIME_HR
+			, DEPT_NM
+			, JBGD_NM
+		FROM USER_MONTHLY_ATTENDANCE
+		WHERE
+			USER_ID = #{userId}
+			AND WORK_MONTH = #{workMonth}
+	</select>
+</mapper>

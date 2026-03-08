@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자            수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	홍현택            최초 생성
+ *	2025. 9. 26.		임가영			insert EMAIL_CONT_ID 수정
+ *	2025.10. 10. 		홍현택			selectEmailContentList 쿼리 추가
+ *	2025.10. 13.		홍현택			insertEmailContent 쿼리 추가
+ *	2025.10. 13.		홍현택			임시저장 수정 시 updateEmailContent 쿼리 추가
+ *	2025.10. 14.		홍현택			안쓰는 이메일 삭제 쿼리 삭제
+ *
+-->
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.EmailContentMapper">
+
+	<select id="selectTotalRecord" resultType="int">
+		SELECT
+		COUNT(*)
+		 FROM
+		 EMAIL_CONTENT
+	</select>
+
+
+	<select id="selectEmailContentList"	resultType="kr.or.ddit.vo.EmailContentVO">
+		WITH NMV AS (
+				SELECT ROW_NUMBER() OVER () AS RNUM
+				, EMAIL_CONT_ID
+				, USER_ID
+				, SUBJECT
+				, CONTENT
+				, SEND_DATE
+				, MAIL_FILE_ID
+			FROM EMAIL_CONTENT
+			)
+			SELECT EMAIL_CONT_ID
+				, USER_ID
+				, SUBJECT
+				, CONTENT
+				, SEND_DATE
+				, MAIL_FILE_ID
+			FROM NMV
+		WHERE RNUM BETWEEN #{startRow} AND #{endRow}
+	</select>
+
+	<select id="selectEmailContentListNonPaging" resultType="kr.or.ddit.vo.EmailContentVO">
+		SELECT
+		EMAIL_CONT_ID
+		, USER_ID
+		, SUBJECT
+		, CONTENT
+		, SEND_DATE
+		, MAIL_FILE_ID
+		FROM
+		 EMAIL_CONTENT
+	</select>
+
+
+	<select id="selectEmailContent"	resultType="kr.or.ddit.vo.EmailContentVO">
+		SELECT
+		EMAIL_CONT_ID
+		, USER_ID
+		, SUBJECT
+		, CONTENT
+		, SEND_DATE
+		,MAIL_FILE_ID
+		FROM
+		EMAIL_CONTENT
+		WHERE
+		EMAIL_CONT_ID = #{emailContId}
+	</select>
+
+
+		<insert id="insertEmailContent" parameterType="kr.or.ddit.vo.EmailContentVO">
+			<selectKey keyProperty="emailContId" resultType="string" order="BEFORE">
+				SELECT 'MAIL' || LPAD(nextval('EMAIL_CONT_ID_SEQ')::text, 8, '0')
+			</selectKey>
+			INSERT INTO
+			EMAIL_CONTENT
+			(
+			EMAIL_CONT_ID, USER_ID, SUBJECT, CONTENT, SEND_DATE, MAIL_FILE_ID, IMPT_MAIL_YN
+			)VALUES(
+				 #{emailContId}
+				, #{userId}
+				, #{subject}
+				, #{content}
+				, #{sendDate}
+				, #{mailFileId}
+				, #{imptMailYn})
+		</insert>
+
+		<update id="updateEmailContent" parameterType="kr.or.ddit.vo.EmailContentVO">
+			UPDATE EMAIL_CONTENT
+			SET
+				SUBJECT = #{subject},
+				CONTENT = #{content},
+				SEND_DATE = #{sendDate},
+				MAIL_FILE_ID = #{mailFileId}
+			WHERE
+				EMAIL_CONT_ID = #{emailContId}
+		</update>
+
+
+
+		<select id="selectEmailCount" resultType="int">
+			SELECT COALESCE(COUNT(*),0)
+			FROM EMAIL_CONTENT
+			WHERE SEND_DATE::date = CURRENT_DATE
+		</select>
+
+	</mapper>

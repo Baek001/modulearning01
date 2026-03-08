@@ -1,0 +1,163 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.MessengerUserMapper">
+
+    <select id="selectRoomParticipants" resultType="kr.or.ddit.vo.MessengerParticipantVO">
+        SELECT
+            u.USER_ID AS USER_ID,
+            u.USER_NM AS USER_NM,
+            d.DEPT_NM AS DEPT_NM,
+            j.JBGD_NM AS JBGD_NM,
+            fd.FILE_PATH AS FILE_PATH,
+            mu.ROLE_CD AS ROLE_CD,
+            mu.NOTIFY_YN AS NOTIFY_YN,
+            CASE WHEN u.USER_ID = #{userId} THEN TRUE ELSE FALSE END AS ME
+        FROM MESSENGER_USER mu
+        INNER JOIN USERS u ON mu.USER_ID = u.USER_ID
+        LEFT JOIN DEPARTMENT d ON u.DEPT_ID = d.DEPT_ID
+        LEFT JOIN JOB_GRADE j ON u.JBGD_CD = j.JBGD_CD
+        LEFT JOIN FILE_DETAIL fd ON u.USER_IMG_FILE_ID = fd.FILE_ID AND COALESCE(fd.DEL_YN, 'N') = 'N'
+        WHERE mu.MSGR_ID = #{msgrId}
+          AND mu.LEFT_DT IS NULL
+        ORDER BY CASE WHEN mu.ROLE_CD = 'owner' THEN 0 ELSE 1 END, u.USER_NM
+    </select>
+
+    <insert id="insertRoomMembers">
+        INSERT INTO MESSENGER_USER (
+            MSGR_ID,
+            USER_ID,
+            JOIN_DT,
+            LEFT_DT,
+            ROLE_CD,
+            NOTIFY_YN
+        ) VALUES
+        <foreach collection="userIds" item="userId" separator=",">
+            (
+                #{msgrId},
+                #{userId},
+                CURRENT_TIMESTAMP,
+                NULL,
+                COALESCE(#{roleCd}, 'member'),
+                'Y'
+            )
+        </foreach>
+        ON CONFLICT (MSGR_ID, USER_ID)
+        DO UPDATE SET
+            LEFT_DT = NULL,
+            JOIN_DT = COALESCE(MESSENGER_USER.JOIN_DT, CURRENT_TIMESTAMP),
+            ROLE_CD = CASE
+                WHEN COALESCE(EXCLUDED.ROLE_CD, 'member') = 'owner' THEN 'owner'
+                ELSE COALESCE(MESSENGER_USER.ROLE_CD, EXCLUDED.ROLE_CD, 'member')
+            END,
+            NOTIFY_YN = 'Y'
+    </insert>
+
+    <insert id="upsertRoomMember">
+        INSERT INTO MESSENGER_USER (
+            MSGR_ID,
+            USER_ID,
+            JOIN_DT,
+            LEFT_DT,
+            ROLE_CD,
+            NOTIFY_YN
+        ) VALUES (
+            #{msgrId},
+            #{userId},
+            CURRENT_TIMESTAMP,
+            NULL,
+            COALESCE(#{roleCd}, 'member'),
+            'Y'
+        )
+        ON CONFLICT (MSGR_ID, USER_ID)
+        DO UPDATE SET
+            LEFT_DT = NULL,
+            JOIN_DT = COALESCE(MESSENGER_USER.JOIN_DT, CURRENT_TIMESTAMP),
+            ROLE_CD = CASE
+                WHEN COALESCE(#{roleCd}, 'member') = 'owner' THEN 'owner'
+                ELSE COALESCE(MESSENGER_USER.ROLE_CD, #{roleCd}, 'member')
+            END,
+            NOTIFY_YN = COALESCE(MESSENGER_USER.NOTIFY_YN, 'Y')
+    </insert>
+
+    <update id="updateLeftTime">
+        UPDATE MESSENGER_USER
+        SET LEFT_DT = CURRENT_TIMESTAMP
+        WHERE USER_ID = #{userId}
+          AND MSGR_ID = #{msgrId}
+          AND LEFT_DT IS NULL
+    </update>
+
+    <update id="updateNotify">
+        UPDATE MESSENGER_USER
+        SET NOTIFY_YN = #{notifyYn}
+        WHERE USER_ID = #{userId}
+          AND MSGR_ID = #{msgrId}
+          AND LEFT_DT IS NULL
+    </update>
+
+    <select id="countRoomUsers" resultType="int">
+        SELECT COUNT(*)
+        FROM MESSENGER_USER
+        WHERE MSGR_ID = #{msgrId}
+          AND LEFT_DT IS NULL
+    </select>
+
+    <select id="selectRoomMembership" resultType="kr.or.ddit.vo.MessengerUserVO">
+        SELECT USER_ID, MSGR_ID, JOIN_DT, LEFT_DT, ROLE_CD, NOTIFY_YN
+        FROM MESSENGER_USER
+        WHERE MSGR_ID = #{msgrId}
+          AND USER_ID = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="selectOwnerUserId" resultType="string">
+        SELECT USER_ID
+        FROM MESSENGER_USER
+        WHERE MSGR_ID = #{msgrId}
+          AND LEFT_DT IS NULL
+          AND ROLE_CD = 'owner'
+        ORDER BY JOIN_DT
+        LIMIT 1
+    </select>
+
+    <insert id="insertMessengerUser">
+        INSERT INTO MESSENGER_USER (
+            USER_ID,
+            MSGR_ID,
+            JOIN_DT,
+            LEFT_DT,
+            ROLE_CD,
+            NOTIFY_YN
+        ) VALUES (
+            #{userId},
+            #{msgrId},
+            #{joinDt},
+            #{leftDt},
+            COALESCE(#{roleCd}, 'member'),
+            COALESCE(#{notifyYn}, 'Y')
+        )
+        ON CONFLICT (MSGR_ID, USER_ID)
+        DO UPDATE SET
+            LEFT_DT = EXCLUDED.LEFT_DT,
+            JOIN_DT = COALESCE(MESSENGER_USER.JOIN_DT, EXCLUDED.JOIN_DT),
+            ROLE_CD = COALESCE(EXCLUDED.ROLE_CD, MESSENGER_USER.ROLE_CD),
+            NOTIFY_YN = COALESCE(EXCLUDED.NOTIFY_YN, MESSENGER_USER.NOTIFY_YN)
+    </insert>
+
+    <select id="selectMessengerUserList" resultType="kr.or.ddit.vo.MessengerUserVO">
+        SELECT USER_ID, MSGR_ID, JOIN_DT, LEFT_DT, ROLE_CD, NOTIFY_YN
+        FROM MESSENGER_USER
+    </select>
+
+    <select id="selectMessengerUser" resultType="kr.or.ddit.vo.MessengerUserVO">
+        SELECT USER_ID, MSGR_ID, JOIN_DT, LEFT_DT, ROLE_CD, NOTIFY_YN
+        FROM MESSENGER_USER
+        WHERE USER_ID = #{userId}
+        LIMIT 1
+    </select>
+
+    <delete id="deleteMessengerUser">
+        DELETE FROM MESSENGER_USER
+        WHERE USER_ID = #{userId}
+    </delete>
+</mapper>

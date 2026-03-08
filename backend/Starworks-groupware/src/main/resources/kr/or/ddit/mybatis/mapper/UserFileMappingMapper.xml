@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *  2025. 10. 4.		임가영			insertUserFileMapping(개인문서함 데이터 삽입) 쿼리 추가
+ *  2025. 10. 8.		임가영			Paging & simple search 기능 구현을 위한 쿼리 추가
+ *  2025. 10. 13.		임가영			nonPaging 쿼리 추가
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.UserFileMappingMapper">
+	<resultMap type="kr.or.ddit.vo.UserFileMappingVO" id="userFileMappingMap" autoMapping="true">
+		<association property="fileMasterVO" javaType="kr.or.ddit.vo.FileMasterVO" autoMapping="true" />
+		<association property="fileDetailVO" javaType="kr.or.ddit.vo.FileDetailVO" autoMapping="true" />
+	</resultMap>
+
+	<!-- 프로젝트 게시판 검색 sql 조각 -->
+	<sql id="userFileSimpleSearchFrag">
+		<where>
+			<if test="paging.simpleSearch neq null">
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(paging.simpleSearch.searchWord)">
+					ORGN_FILE_NM LIKE '%'||#{paging.simpleSearch.searchWord}||'%'
+				</if>
+			</if>
+		</where>
+	</sql>
+
+	<sql id="userFileMappingList">
+		SELECT
+			UFM.USER_ID
+			, UFM.USER_FILE_ID
+			, UFM.USER_FILE_SQN
+			, UFM.FOLDER_SQN
+			, FM.CRT_DT
+			, FD.ORGN_FILE_NM
+			, FD.SAVE_FILE_NM
+			, FD.FILE_SIZE
+			, FD.FILE_MIME_TYPE
+		FROM
+			USER_FILE_MAPPING UFM
+				LEFT OUTER JOIN FILE_MASTER FM ON (FM.FILE_ID = UFM.USER_FILE_ID)
+				LEFT OUTER JOIN FILE_DETAIL FD ON (FD.FILE_ID = UFM.USER_FILE_ID AND FD.FILE_SEQ = UFM.USER_FILE_SQN)
+		WHERE
+			UFM.USER_ID = #{userId}
+			AND FM.DEL_YN = 'N'
+			AND FD.DEL_YN = 'N'
+			<choose>
+				<when test="folderSqn != null">
+					AND UFM.FOLDER_SQN = #{folderSqn}
+				</when>
+				<otherwise>
+				 	AND UFM.FOLDER_SQN IS NULL
+				</otherwise>
+			</choose>
+		ORDER BY
+			FM.CRT_DT DESC
+	</sql>
+
+	<select id="selectUserFileMappingTotalRecord" resultType="int">
+		SELECT COUNT(*)
+		FROM (<include refid="userFileMappingList" /> )
+		<include refid="userFileSimpleSearchFrag" />
+	</select>
+
+	<select id="selectUserFileMappingInFolder" resultMap="userFileMappingMap">
+		SELECT
+			USER_ID
+			, USER_FILE_ID
+			, USER_FILE_SQN
+			, FOLDER_SQN
+		FROM
+			USER_FILE_MAPPING
+		WHERE
+			FOLDER_SQN = #{folderSqn}
+	</select>
+
+	<select id="selectUserFileMappingListPaging" resultMap="userFileMappingMap">
+		WITH CMV as (
+			SELECT ROW_NUMBER() OVER () AS RNUM, PBU.*
+			FROM (
+				<include refid="userFileMappingList" />
+			) PBU
+			<include refid="userFileSimpleSearchFrag" />
+		)
+		SELECT *
+		FROM
+			CMV
+		WHERE
+			RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+	</select>
+
+	<select id="selectUserFileMapping" resultMap="userFileMappingMap">
+		SELECT
+			UFM.USER_ID
+			, UFM.USER_FILE_ID
+			, UFM.USER_FILE_SQN
+			, UFM.FOLDER_SQN
+		FROM
+			USER_FILE_MAPPING UFM
+				LEFT OUTER JOIN FILE_MASTER FM ON (FM.FILE_ID = UFM.USER_FILE_ID)
+				LEFT OUTER JOIN FILE_DETAIL FD ON (FD.FILE_ID = UFM.USER_FILE_ID AND FD.FILE_SEQ = UFM.USER_FILE_SQN)
+		WHERE
+			UFM.USER_ID = #{userId}
+			AND UFM.USER_FILE_ID = #{userFileId}
+			AND UFM.USER_FILE_SQN = #{userFileSqn}
+			AND FM.DEL_YN = 'N'
+			AND FD.DEL_YN = 'N'
+	</select>
+
+	<insert id="insertUserFileMapping">
+		INSERT INTO
+			USER_FILE_MAPPING (
+				USER_ID
+				, USER_FILE_ID
+				, USER_FILE_SQN
+				, FOLDER_SQN
+			) VALUES (
+				#{userId}
+				, #{userFileId}
+				, #{userFileSqn}
+				, #{folderSqn}
+			)
+	</insert>
+
+	<update id="updateFileFolder">
+		UPDATE USER_FILE_MAPPING
+		SET
+			FOLDER_SQN = #{folderSqn}
+		WHERE
+			USER_ID = #{userId}
+			AND USER_FILE_ID = #{userFileId}
+			AND USER_FILE_SQN = #{userFileSqn}
+	</update>
+
+	<!-- ============================= 가영 추가 ============================= -->
+	<select id="selectUserFileMappingNonPaging" resultType="kr.or.ddit.vo.UserFileMappingVO" resultMap="userFileMappingMap">
+		SELECT
+			UFM.USER_ID
+			, UFM.USER_FILE_ID
+			, UFM.USER_FILE_SQN
+			, UFM.FOLDER_SQN
+			, FM.CRT_DT
+			, FD.FILE_ID
+			, FD.FILE_SEQ
+			, FD.ORGN_FILE_NM
+			, FD.SAVE_FILE_NM
+			, FD.FILE_SIZE
+		FROM
+			USER_FILE_MAPPING UFM
+				LEFT OUTER JOIN FILE_MASTER FM ON (FM.FILE_ID = UFM.USER_FILE_ID)
+				LEFT OUTER JOIN FILE_DETAIL FD ON (FD.FILE_ID = UFM.USER_FILE_ID AND FD.FILE_SEQ = UFM.USER_FILE_SQN)
+		WHERE
+			UFM.USER_ID = #{userId}
+			AND FM.DEL_YN = 'N'
+			AND FD.DEL_YN = 'N'
+			<choose>
+				<when test="folderSqn != null">
+					AND UFM.FOLDER_SQN = #{folderSqn}
+				</when>
+				<otherwise>
+				 	AND UFM.FOLDER_SQN IS NULL
+				</otherwise>
+			</choose>
+	</select>
+
+	<!-- 개인문서함 목록 조회 (페이징 O) -->
+	<select id="selectUserFileMappingList" resultType="kr.or.ddit.vo.UserFileMappingVO" resultMap="userFileMappingMap">
+		SELECT *
+		FROM (
+			SELECT ROW_NUMBER() OVER () AS RNUM, D.*
+			FROM (
+					SELECT
+						UFM.USER_ID
+						, UFM.USER_FILE_ID
+						, UFM.USER_FILE_SQN
+						, UFM.FOLDER_SQN
+						, FM.CRT_DT
+						, FD.FILE_ID
+						, FD.FILE_SEQ
+						, FD.ORGN_FILE_NM
+						, FD.SAVE_FILE_NM
+						, FD.FILE_SIZE
+						, FD.FILE_MIME_TYPE
+					FROM
+						USER_FILE_MAPPING UFM
+							LEFT OUTER JOIN FILE_MASTER FM ON (FM.FILE_ID = UFM.USER_FILE_ID)
+							LEFT OUTER JOIN FILE_DETAIL FD ON (FD.FILE_ID = UFM.USER_FILE_ID AND FD.FILE_SEQ = UFM.USER_FILE_SQN)
+					WHERE
+						UFM.USER_ID = #{userFileMappingVO.userId}
+						AND FM.DEL_YN = 'N'
+						AND FD.DEL_YN = 'N'
+						<choose>
+							<when test="userFileMappingVO.folderSqn != null">
+								AND UFM.FOLDER_SQN = #{userFileMappingVO.folderSqn}
+							</when>
+							<otherwise>
+							 	AND UFM.FOLDER_SQN IS NULL
+							</otherwise>
+						</choose>
+					ORDER BY FM.CRT_DT DESC
+					) D )
+		 WHERE
+        RNUM BETWEEN #{paging.startRow} AND #{paging.endRow}
+	</select>
+
+	<!-- 삭제된 파일 조회 -->
+	<select id="selectUserFileMappingNonPagingByDelY" resultType="kr.or.ddit.vo.UserFileMappingVO" resultMap="userFileMappingMap">
+		SELECT
+			UFM.USER_ID
+			, UFM.USER_FILE_ID
+			, UFM.USER_FILE_SQN
+			, UFM.FOLDER_SQN
+			, FM.FILE_ID
+			, FM.CRT_DT
+			, FD.FILE_SEQ
+			, FD.ORGN_FILE_NM
+			, FD.EXT_FILE
+			, FD.FILE_SIZE
+			, FD.FILE_MIME_TYPE
+			, FD.DEL_YN
+			, U.USER_NM
+		FROM
+			USER_FILE_MAPPING UFM
+		LEFT OUTER JOIN
+			FILE_MASTER FM
+			ON FM.FILE_ID = UFM.USER_FILE_ID
+		LEFT OUTER JOIN
+			FILE_DETAIL FD
+			ON FD.FILE_SEQ = UFM.USER_FILE_SQN
+		LEFT OUTER JOIN
+			USERS U
+			ON U.USER_ID = UFM.USER_ID
+		WHERE
+			UFM.USER_ID = #{userId}
+		AND
+			FD.DEL_YN = 'Y'
+		<choose>
+			<when test="folderSqn != null">
+				AND
+			 		UFM.FOLDER_SQN = #{folderSqn}
+			</when>
+			<otherwise>
+				AND
+			 		UFM.FOLDER_SQN IS NULL
+			</otherwise>
+		</choose>
+	</select>
+
+	<update id="updateUserFileMappingByDelY">
+		UPDATE
+			USER_FILE_MAPPING
+		SET
+			FOLDER_SQN = NULL
+		WHERE
+			USER_FILE_ID = #{userFileId}
+		AND
+			USER_FILE_SQN = #{userFileSqn}
+	</update>
+
+</mapper>

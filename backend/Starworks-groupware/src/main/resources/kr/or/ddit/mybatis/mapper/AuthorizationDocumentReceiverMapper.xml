@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.AuthorizationDocumentReceiverMapper">
+
+    <sql id="receiverColumns">
+          R.ATRZ_DOC_ID
+        , R.OPEN_YN
+        , R.OPEN_DT
+        , R.ATRZ_RCVR_ID
+        , U.USER_NM AS userNm
+        , D.DEPT_NM AS deptNm
+        , J.JBGD_NM AS jbgdNm
+        , FD.FILE_PATH AS filePath
+    </sql>
+
+    <sql id="receiverJoins">
+        FROM AUTHORIZATION_DOCUMENT_RECEIVER R
+        LEFT JOIN USERS U
+          ON U.USER_ID = R.ATRZ_RCVR_ID
+        LEFT JOIN DEPARTMENT D
+          ON D.DEPT_ID = U.DEPT_ID
+        LEFT JOIN JOB_GRADE J
+          ON J.JBGD_CD = U.JBGD_CD
+        LEFT JOIN FILE_DETAIL FD
+          ON FD.FILE_ID = U.USER_IMG_FILE_ID
+    </sql>
+
+    <insert id="insertAuthDocumentReceiver">
+        INSERT INTO AUTHORIZATION_DOCUMENT_RECEIVER(
+            ATRZ_DOC_ID,
+            OPEN_YN,
+            OPEN_DT,
+            ATRZ_RCVR_ID
+        ) VALUES (
+            #{atrzDocId},
+            COALESCE(#{openYn}, 'N'),
+            #{openDt},
+            #{atrzRcvrId}
+        )
+    </insert>
+
+    <select id="selectAuthDocumentReceiverList" resultType="kr.or.ddit.vo.AuthorizationDocumentReceiverVO">
+        SELECT
+            <include refid="receiverColumns" />
+        <include refid="receiverJoins" />
+        ORDER BY R.ATRZ_DOC_ID DESC, R.ATRZ_RCVR_ID
+    </select>
+
+    <select id="selectAuthDocumentReceiverListByDocId" resultType="kr.or.ddit.vo.AuthorizationDocumentReceiverVO">
+        SELECT
+            <include refid="receiverColumns" />
+        <include refid="receiverJoins" />
+        WHERE R.ATRZ_DOC_ID = #{atrzDocId}
+        ORDER BY R.ATRZ_RCVR_ID
+    </select>
+
+    <select id="selectAuthDocumentReceiver" resultType="kr.or.ddit.vo.AuthorizationDocumentReceiverVO">
+        SELECT
+            <include refid="receiverColumns" />
+        <include refid="receiverJoins" />
+        WHERE R.ATRZ_RCVR_ID = #{atrzRcvrId}
+        ORDER BY R.OPEN_DT DESC NULLS LAST
+        LIMIT 1
+    </select>
+</mapper>

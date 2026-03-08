@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.ApprovalReactMapper">
+
+    <sql id="approvalListColumns">
+          d.ATRZ_DOC_ID AS atrzDocId
+        , d.ATRZ_USER_ID AS atrzUserId
+        , d.ATRZ_DOC_TMPL_ID AS atrzDocTmplId
+        , d.ATRZ_DOC_TTL AS atrzDocTtl
+        , d.ATRZ_SBMT_DT AS atrzSbmtDt
+        , d.CRNT_ATRZ_STEP_CD AS crntAtrzStepCd
+        , d.DEL_YN AS delYn
+        , d.OPEN_YN AS openYn
+        , d.ATRZ_FILE_ID AS atrzFileId
+        , t.ATRZ_DOC_TMPL_NM AS atrzDocTmplNm
+        , t.ATRZ_DOC_CD AS atrzDocCd
+        , t.ATRZ_CATEGORY AS atrzCategory
+        , CAST(t.ATRZ_SECURE_LVL AS INTEGER) AS atrzSecureLvl
+        , u.USER_NM AS drafterName
+        , j.JBGD_NM AS drafterJbgdNm
+        , dp.DEPT_NM AS drafterDeptNm
+        , fd.FILE_PATH AS drafterFilePath
+        , cc.CODE_NM AS crntAtrzStepNm
+    </sql>
+
+    <sql id="approvalBaseJoins">
+        FROM AUTHORIZATION_DOCUMENT d
+        JOIN AUTHORIZATION_DOCUMENT_TEMPLATE t
+          ON t.ATRZ_DOC_TMPL_ID = d.ATRZ_DOC_TMPL_ID
+        JOIN USERS u
+          ON u.USER_ID = d.ATRZ_USER_ID
+        LEFT JOIN JOB_GRADE j
+          ON j.JBGD_CD = u.JBGD_CD
+        LEFT JOIN DEPARTMENT dp
+          ON dp.DEPT_ID = u.DEPT_ID
+        LEFT JOIN FILE_DETAIL fd
+          ON fd.FILE_ID = u.USER_IMG_FILE_ID
+        LEFT JOIN COMMON_CODE cc
+          ON cc.CODE_ID = d.CRNT_ATRZ_STEP_CD
+    </sql>
+
+    <select id="selectDraftDocuments" resultType="kr.or.ddit.vo.AuthorizationDocumentVO">
+        SELECT
+            <include refid="approvalListColumns" />
+        <include refid="approvalBaseJoins" />
+        WHERE COALESCE(d.DEL_YN, 'N') = 'N'
+          AND d.ATRZ_USER_ID = #{userId}
+        ORDER BY d.ATRZ_SBMT_DT DESC, d.ATRZ_DOC_ID DESC
+    </select>
+
+    <select id="selectInboxDocuments" resultType="kr.or.ddit.vo.AuthorizationDocumentVO">
+        SELECT DISTINCT ON (d.ATRZ_DOC_ID)
+            <include refid="approvalListColumns" />
+        <include refid="approvalBaseJoins" />
+        JOIN AUTHORIZATION_LINE pending
+          ON pending.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+         AND pending.ATRZ_APPR_USER_ID = #{userId}
+         AND pending.ATRZ_APPR_STTS IN ('A301', 'A302')
+        WHERE COALESCE(d.DEL_YN, 'N') = 'N'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM AUTHORIZATION_LINE prev
+              WHERE prev.ATRZ_DOC_ID = pending.ATRZ_DOC_ID
+                AND prev.ATRZ_LINE_SEQ &lt; pending.ATRZ_LINE_SEQ
+                AND prev.ATRZ_APPR_STTS IN ('A301', 'A302')
+          )
+        ORDER BY d.ATRZ_DOC_ID, pending.ATRZ_LINE_SEQ, d.ATRZ_SBMT_DT DESC
+    </select>
+
+    <select id="selectUpcomingDocuments" resultType="kr.or.ddit.vo.AuthorizationDocumentVO">
+        SELECT DISTINCT ON (d.ATRZ_DOC_ID)
+            <include refid="approvalListColumns" />
+        <include refid="approvalBaseJoins" />
+        JOIN AUTHORIZATION_LINE mine
+          ON mine.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+         AND mine.ATRZ_APPR_USER_ID = #{userId}
+        WHERE COALESCE(d.DEL_YN, 'N') = 'N'
+          AND d.CRNT_ATRZ_STEP_CD IN ('A202', 'A203')
+          AND mine.ATRZ_APPR_STTS IS NULL
+          AND EXISTS (
+              SELECT 1
+              FROM AUTHORIZATION_LINE prev
+              WHERE prev.ATRZ_DOC_ID = mine.ATRZ_DOC_ID
+                AND prev.ATRZ_LINE_SEQ &lt; mine.ATRZ_LINE_SEQ
+                AND prev.ATRZ_APPR_STTS IN ('A301', 'A302')
+          )
+        ORDER BY d.ATRZ_DOC_ID, mine.ATRZ_LINE_SEQ, d.ATRZ_SBMT_DT DESC
+    </select>
+
+    <select id="selectReferenceDocuments" resultType="kr.or.ddit.vo.AuthorizationDocumentVO">
+        SELECT DISTINCT ON (d.ATRZ_DOC_ID)
+            <include refid="approvalListColumns" />
+        <include refid="approvalBaseJoins" />
+        JOIN AUTHORIZATION_DOCUMENT_RECEIVER r
+          ON r.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+         AND r.ATRZ_RCVR_ID = #{userId}
+        WHERE COALESCE(d.DEL_YN, 'N') = 'N'
+        ORDER BY d.ATRZ_DOC_ID, d.ATRZ_SBMT_DT DESC
+    </select>
+
+    <select id="selectArchiveDocuments" resultType="kr.or.ddit.vo.AuthorizationDocumentVO">
+        SELECT DISTINCT ON (d.ATRZ_DOC_ID)
+            <include refid="approvalListColumns" />
+        <include refid="approvalBaseJoins" />
+        WHERE COALESCE(d.DEL_YN, 'N') = 'N'
+          AND d.CRNT_ATRZ_STEP_CD IN ('A204', 'A205', 'A206')
+          AND (
+              d.ATRZ_USER_ID = #{userId}
+              OR EXISTS (
+                  SELECT 1
+                  FROM AUTHORIZATION_LINE al
+                  WHERE al.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+                    AND al.ATRZ_APPR_USER_ID = #{userId}
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM AUTHORIZATION_DOCUMENT_RECEIVER r
+                  WHERE r.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+                    AND r.ATRZ_RCVR_ID = #{userId}
+              )
+          )
+        ORDER BY d.ATRZ_DOC_ID, d.ATRZ_SBMT_DT DESC
+    </select>
+
+    <select id="existsDocumentAccess" resultType="int">
+        SELECT CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+        FROM AUTHORIZATION_DOCUMENT d
+        WHERE d.ATRZ_DOC_ID = #{atrzDocId}
+          AND COALESCE(d.DEL_YN, 'N') = 'N'
+          AND (
+              d.ATRZ_USER_ID = #{userId}
+              OR EXISTS (
+                  SELECT 1
+                  FROM AUTHORIZATION_LINE al
+                  WHERE al.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+                    AND al.ATRZ_APPR_USER_ID = #{userId}
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM AUTHORIZATION_DOCUMENT_RECEIVER r
+                  WHERE r.ATRZ_DOC_ID = d.ATRZ_DOC_ID
+                    AND r.ATRZ_RCVR_ID = #{userId}
+              )
+          )
+    </select>
+</mapper>

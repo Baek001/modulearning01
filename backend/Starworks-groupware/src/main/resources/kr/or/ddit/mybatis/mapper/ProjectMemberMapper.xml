@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	김주민            최초 생성
+ *  2025. 9. 30.     	장어진	        사용자 한명이 무슨 프로젝트에 참여했는지에 대한 목록 조회 추가
+ *  2025. 10. 01. 		김주민			수정 시 중복체크에 필요한 countProjectMember 추가
+ *	2025. 10. 08. 		김주민			권한 코드 조회 getProjectAuthority 추가
+ * 	2025. 10. 16.		김주민			selectProjectMemberByProject 직급 테이블 조인
+ * 	2025. 10. 17.		장어진			진행중인 프로젝트 목록만 가져오는 쿼리 추가
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.ProjectMemberMapper">
+
+<select id="getProjectAuthority" resultType="String">
+	SELECT BIZ_AUTH_CD
+    FROM PROJECT_MEMBER
+    WHERE BIZ_ID = #{bizId}
+      AND BIZ_USER_ID = #{bizUserId}
+</select>
+
+<select id="countProjectMember" resultType="int">
+	SELECT COUNT(*)
+	FROM PROJECT_MEMBER
+	WHERE BIZ_ID = #{bizId}
+		AND BIZ_USER_ID = #{bizUserId}
+</select>
+
+<insert id="insertProjectMember">
+	INSERT INTO PROJECT_MEMBER(
+		BIZ_ID
+           , BIZ_USER_ID
+           , BIZ_AUTH_CD
+	) VALUES (
+		#{bizId}
+		, #{bizUserId}
+		, #{bizAuthCd}
+	)
+</insert>
+
+<select id="selectProjectMemberListNonPaging" resultType="kr.or.ddit.vo.ProjectMemberVO">
+	SELECT
+		BIZ_ID
+		, BIZ_AUTH_CD
+		, BIZ_USER_ID
+	FROM PROJECT_MEMBER
+	WHERE BIZ_AUTH_CD != 'B104'
+	ORDER BY BIZ_ID, BIZ_USER_ID
+</select>
+
+<!-- 프로젝트별 인원 정보 조회 -->
+<select id="selectProjectMemberByProject" resultType="kr.or.ddit.vo.ProjectMemberVO">
+	SELECT
+		pm.BIZ_ID
+		, pm.BIZ_AUTH_CD
+		, pm.BIZ_USER_ID
+		, u.USER_NM AS bizUserNm
+		, d.DEPT_NM AS bizUserDeptNm
+		, jg.JBGD_NM AS bizUserJobNm
+		, cc.CODE_NM AS bizAuthNm
+		, f.FILE_PATH AS filePath
+	FROM PROJECT_MEMBER pm
+	INNER JOIN USERS u
+		ON pm.BIZ_USER_ID = u.USER_ID
+	LEFT JOIN DEPARTMENT d
+		ON u.DEPT_ID = d.DEPT_ID
+	LEFT JOIN JOB_GRADE jg  ON u.JBGD_CD = jg.JBGD_CD
+	INNER JOIN COMMON_CODE cc
+		ON pm.BIZ_AUTH_CD = cc.CODE_ID
+		AND cc.CODE_GRP_ID = 'B1'
+	LEFT JOIN FILE_DETAIL f            <!-- ✅ 프로필 파일 조인 -->
+	ON u.USER_IMG_FILE_ID = f.FILE_ID
+	WHERE pm.BIZ_ID = #{bizId}
+	  AND pm.BIZ_AUTH_CD != 'B104'
+	ORDER BY pm.BIZ_USER_ID
+</select>
+
+<select id="selectProjectByProjectMember" resultType="kr.or.ddit.vo.ProjectMemberVO">
+	SELECT
+		PM.BIZ_ID
+		, P.BIZ_NM
+	FROM PROJECT_MEMBER	PM
+		INNER JOIN PROJECT P ON P.BIZ_ID = PM.BIZ_ID
+	WHERE PM.BIZ_USER_ID = #{bizUserId}
+	  AND PM.BIZ_AUTH_CD != 'B103'
+	  AND PM.BIZ_AUTH_CD != 'B104'
+	ORDER BY PM.BIZ_ID
+</select>
+
+<select id="selectProjectByProjectMemberOnlyB302" resultType="kr.or.ddit.vo.ProjectMemberVO">
+	SELECT
+		PM.BIZ_ID
+		, P.BIZ_NM
+	FROM PROJECT_MEMBER	PM
+		INNER JOIN PROJECT P ON P.BIZ_ID = PM.BIZ_ID
+	WHERE PM.BIZ_USER_ID = #{bizUserId}
+	  AND PM.BIZ_AUTH_CD != 'B103'
+	  AND PM.BIZ_AUTH_CD != 'B104'
+	  AND P.BIZ_STTS_CD = 'B302'
+	ORDER BY PM.BIZ_ID
+</select>
+
+<select id="selectProjectMember" resultType="kr.or.ddit.vo.ProjectMemberVO">
+	SELECT
+		BIZ_ID
+		, BIZ_AUTH_CD
+		, BIZ_USER_ID
+	FROM PROJECT_MEMBER
+	WHERE BIZ_ID = #{bizId}
+	AND BIZ_USER_ID = #{bizUserId}
+</select>
+
+<update id="updateProjectMember">
+	UPDATE PROJECT_MEMBER
+		SET BIZ_AUTH_CD = #{bizAuthCd}
+	WHERE BIZ_ID = #{bizId}
+	AND BIZ_USER_ID = #{bizUserId}
+</update>
+
+<update id="deleteProjectMember">
+	UPDATE PROJECT_MEMBER
+		SET BIZ_AUTH_CD = 'B104'
+	WHERE BIZ_ID = #{bizId}
+	AND BIZ_USER_ID = #{bizUserId}
+</update>
+
+</mapper>

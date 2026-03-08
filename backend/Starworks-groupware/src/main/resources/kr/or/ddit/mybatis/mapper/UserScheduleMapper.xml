@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	장어진            최초 생성
+ *
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.UserScheduleMapper">
+	<select id="selectUserScheduleList" resultType="kr.or.ddit.vo.UserScheduleVO">
+		SELECT 
+			US.USER_SCHD_ID
+			, US.USER_ID
+<!-- 			, U.USER_NM -->
+			, US.SCHD_STRT_DT
+			, US.SCHD_END_DT
+			, US.SCHD_TTL
+			, US.ALLDAY
+			, US.USER_SCHD_EXPLN
+			, US.DEL_YN
+		FROM 
+			USER_SCHEDULE US
+<!-- 				INNER JOIN USERS U ON (U.USER_ID = US.USER_ID) -->
+	</select>
+	<select id="selectUserScheduleListByUserId" resultType="kr.or.ddit.vo.UserScheduleVO">
+		SELECT
+			US.USER_SCHD_ID
+			, US.USER_ID
+			, US.SCHD_STRT_DT
+			, US.SCHD_END_DT
+			, US.SCHD_TTL
+			, US.ALLDAY
+			, US.USER_SCHD_EXPLN
+			, US.DEL_YN
+		FROM USER_SCHEDULE US
+		WHERE US.USER_ID = #{userId}
+		  AND COALESCE(US.DEL_YN, 'N') = 'N'
+		ORDER BY US.SCHD_STRT_DT ASC, US.USER_SCHD_ID ASC
+	</select>
+	<select id="selectUserSchedule" resultType="kr.or.ddit.vo.UserScheduleVO">
+		SELECT
+			US.USER_SCHD_ID
+			, US.USER_ID
+<!-- 			, U.USER_NM -->
+			, US.SCHD_STRT_DT
+			, US.SCHD_END_DT
+			, US.SCHD_TTL
+			, US.ALLDAY
+			, US.USER_SCHD_EXPLN	
+			, US.DEL_YN		
+		FROM
+			USER_SCHEDULE US
+<!-- 				INNER JOIN USERS U ON (U.USER_ID = US.USER_ID) -->		
+		WHERE 
+			USER_SCHD_ID = #{userSchdId}
+	</select>
+	<insert id="insertUserSchedule">
+	<selectKey order="BEFORE" resultType="String" keyProperty="userSchdId">
+		 SELECT ('USSD' || LPAD(nextval('USER_SCHEDULE_ID_SEQ')::text, 12, '0'))
+	</selectKey>
+		INSERT INTO USER_SCHEDULE (
+			USER_SCHD_ID
+			, USER_ID
+			, SCHD_STRT_DT
+			, SCHD_END_DT
+			, SCHD_TTL
+			, ALLDAY
+			, USER_SCHD_EXPLN
+		) VALUES (
+			#{userSchdId}
+			, #{userId}
+			, #{schdStrtDt}
+			, #{schdEndDt}
+			, #{schdTtl}
+			, #{allday}
+			, #{userSchdExpln}
+		)
+	</insert>
+	<update id="updateUserSchedule">
+		UPDATE USER_SCHEDULE
+		SET 
+			SCHD_TTL = #{schdTtl}
+			, SCHD_STRT_DT = #{schdStrtDt}
+			, SCHD_END_DT = #{schdEndDt}
+			, ALLDAY = #{allday}
+			, USER_SCHD_EXPLN = #{userSchdExpln}
+			, DEL_YN = #{delYn}
+		WHERE 
+			USER_SCHD_ID = #{userSchdId}
+	</update>
+	<update id="softDeleteUserSchedule">
+		UPDATE USER_SCHEDULE
+		SET DEL_YN = 'Y'
+		WHERE USER_SCHD_ID = #{userSchdId}
+	</update>
+</mapper>

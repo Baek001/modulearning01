@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * == 개정이력(Modification Information) ==
+ *
+ *   수정일      			수정자           수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 25.     	홍현택             쿼리 작성
+ *	2025.10. 10.		홍현택			selectReceiversByEmailId쿼리 추가.
+ *	2025.10. 13. 		홍현택		deleteEmailReceiversByEmailId쿼리 추가. 수신자 정보 삭제
+ *
+-->
+
+<mapper namespace="kr.or.ddit.mybatis.mapper.EmailReceiverMapper">
+	<insert id="insertEmailReceiver" parameterType="kr.or.ddit.vo.EmailReceiverVO">
+		INSERT INTO EMAIL_RECEIVER(
+			MAIL_RCVR_SQN
+			,EMAIL_CONT_ID
+			,USER_ID
+		)VALUES(
+			 nextval('MAIL_RCVR_SEQ')
+			,#{emailContId}
+			,#{userId}
+		)
+	</insert>
+
+	<insert id="insertEmailReceivers" parameterType="java.util.List">
+        INSERT INTO EMAIL_RECEIVER(
+            MAIL_RCVR_SQN
+            , EMAIL_CONT_ID
+            , USER_ID
+        )
+        SELECT nextval('MAIL_RCVR_SEQ'), A.* FROM (
+        <foreach collection="list" item="receiver" separator=" UNION ALL ">
+            SELECT
+                #{receiver.emailContId} AS EMAIL_CONT_ID,
+                #{receiver.userId} AS USER_ID
+        </foreach>
+        ) A
+    </insert>
+
+	<select id="selectEmailReceiverList" resultType="kr.or.ddit.vo.EmailReceiverVO">
+		SELECT
+		MAIL_RCVR_SQN
+		,EMAIL_CONT_ID
+		,USER_ID
+		FROM
+		EMAIL_RECEIVER
+	</select>
+
+	<select id="selectEmailReceiver">
+	SELECT
+		MAIL_RCVR_SQN
+		,EMAIL_CONT_ID
+		,USER_ID
+		FROM
+		EMAIL_RECEIVER
+	WHERE
+		EMAIL_CONT_ID = #{EmailContId}
+	</select>
+
+	<select id="selectReceiversByEmailId" parameterType="string" resultType="kr.or.ddit.vo.EmailReceiverVO">
+		SELECT
+			A.MAIL_RCVR_SQN,
+			A.EMAIL_CONT_ID,
+			A.USER_ID,
+			B.USER_NM AS "userName"
+		FROM
+			EMAIL_RECEIVER A
+		INNER JOIN
+			USERS B ON A.USER_ID = B.USER_ID
+		WHERE A.EMAIL_CONT_ID = #{emailContId}
+	</select>
+
+	<delete id="deleteEmailReceiversByEmailId" parameterType="string">
+		DELETE FROM EMAIL_RECEIVER
+		WHERE EMAIL_CONT_ID = #{emailContId}
+	</delete>
+</mapper>

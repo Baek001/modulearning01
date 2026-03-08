@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+* == 개정이력(Modification Information) ==
+*
+* 	수정일 			수정자			 수정내용
+* ============ ============== =======================
+* 2025. 9. 25. 		김주민 			최초 생성
+*
+-->
+<mapper namespace="kr.or.ddit.mybatis.mapper.TaskChecklistMapper">
+
+<insert id="insertTaskChecklist">
+    <selectKey keyProperty="chklistSqn" resultType="Integer" order="BEFORE">
+        SELECT nextval('CHKLIST_SQN_SEQ')
+    </selectKey>
+    INSERT INTO TASK_CHECKLIST (
+        CHKLIST_SQN
+        , TASK_ID
+        , TASK_PIC_ID
+        , CHKLIST_CONT
+        , COMPLT_YN
+    ) VALUES (
+        #{chklistSqn}
+        , #{taskId}
+        , #{taskPicId}
+        , #{chklistCont}
+        , 'N'
+    )
+</insert>
+
+<select id="selectTaskChecklistList" resultType="kr.or.ddit.vo.TaskChecklistVO">
+    SELECT
+        CHKLIST_SQN
+        , TASK_ID
+        , TASK_PIC_ID
+        , CHKLIST_CONT
+        , COMPLT_YN
+    FROM TASK_CHECKLIST
+    WHERE TASK_ID = #{taskId}
+    ORDER BY CHKLIST_SQN
+</select>
+
+<select id="selectTaskChecklistByTask" resultType="kr.or.ddit.vo.TaskChecklistVO">
+    SELECT
+        CHKLIST_SQN
+        , TASK_ID
+        , TASK_PIC_ID
+        , CHKLIST_CONT
+        , COMPLT_YN
+    FROM TASK_CHECKLIST
+    WHERE TASK_ID = #{taskId}
+    ORDER BY CHKLIST_SQN
+</select>
+
+<select id="selectTaskChecklist" resultType="kr.or.ddit.vo.TaskChecklistVO">
+    SELECT
+        CHKLIST_SQN
+        , TASK_ID
+        , TASK_PIC_ID
+        , CHKLIST_CONT
+        , COMPLT_YN
+    FROM TASK_CHECKLIST
+    WHERE CHKLIST_SQN = #{chklistSqn}
+</select>
+
+<update id="updateTaskChecklist">
+    UPDATE TASK_CHECKLIST
+    SET
+        TASK_PIC_ID = #{taskPicId}
+        , CHKLIST_CONT = #{chklistCont}
+        , COMPLT_YN = #{compltYn}
+    WHERE CHKLIST_SQN = #{chklistSqn}
+</update>
+
+<delete id="deleteTaskChecklist">
+    DELETE FROM TASK_CHECKLIST
+    WHERE CHKLIST_SQN = #{chklistSqn}
+</delete>
+
+</mapper>

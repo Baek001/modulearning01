@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+ * == 개정이력(Modification Information) ==
+ *   
+ *   수정일      			수정자            수정내용
+ *  ============   	============== =======================
+ *  2025. 9. 26.     	임가영            최초 생성
+ *
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.CommonCodeGroupMapper">
+
+<select id="selectCommonCodeGroupList" resultType="kr.or.ddit.vo.CommonCodeGroupVO">
+	SELECT
+		CODE_GRP_ID
+		, CODE_GRP_NM
+		, USE_YN
+	FROM
+		COMMON_CODE_GROUP
+</select>
+
+<select id="selectCommonCodeGroup" resultType="kr.or.ddit.vo.CommonCodeGroupVO">
+	SELECT
+		CODE_GRP_ID
+		, CODE_GRP_NM
+		, USE_YN
+	FROM
+		COMMON_CODE_GROUP
+	WHERE
+		CODE_GRP_ID = #{codeGrpId}
+</select>
+</mapper>

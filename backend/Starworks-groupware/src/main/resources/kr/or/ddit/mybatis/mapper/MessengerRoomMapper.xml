@@ -1,0 +1,224 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mybatis.mapper.MessengerRoomMapper">
+
+    <sql id="roomSelectColumns">
+        r.MSGR_ID,
+        CASE
+            WHEN COALESCE(r.ROOM_TYPE_CD, 'group') = 'self' THEN '나와의 채팅'
+            WHEN COALESCE(r.ROOM_TYPE_CD, 'group') = 'private' THEN COALESCE(partner.USER_NM, NULLIF(r.MSGR_NM, ''), '1:1 대화')
+            ELSE COALESCE(NULLIF(r.MSGR_NM, ''), member_names.MEMBER_NAMES, '그룹 채팅')
+        END AS MSGR_NM,
+        r.CRT_DT,
+        r.DEL_YN,
+        COALESCE(r.ROOM_TYPE_CD, 'group') AS ROOM_TYPE_CD,
+        r.PINNED_MSG_CONT_ID,
+        r.PINNED_BY,
+        r.PINNED_DT,
+        mu.ROLE_CD AS CURRENT_USER_ROLE,
+        mu.NOTIFY_YN,
+        owner_info.OWNER_USER_ID,
+        pinned_msg.CONTENTS AS PINNED_MESSAGE_PREVIEW,
+        partner.FILE_PATH AS PARTNER_FILE_PATH,
+        partner.DEPT_NM AS PARTNER_DEPT_NM,
+        partner.JBGD_NM AS PARTNER_JBGD_NM,
+        last_msg.LAST_MSG_CONT,
+        last_msg.SEND_DT AS LAST_MSG_DT,
+        COALESCE(unread_info.UNREAD_COUNT, 0) AS UNREAD_COUNT,
+        COALESCE(member_names.MEMBER_COUNT, 0) AS MEMBER_COUNT,
+        COALESCE(member_names.MEMBER_COUNT, 0) AS PARTICIPANT_COUNT
+    </sql>
+
+    <sql id="roomSelectJoins">
+        INNER JOIN MESSENGER_USER mu
+            ON r.MSGR_ID = mu.MSGR_ID
+           AND mu.USER_ID = #{userId}
+           AND mu.LEFT_DT IS NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                u.USER_ID,
+                u.USER_NM,
+                d.DEPT_NM,
+                j.JBGD_NM,
+                fd.FILE_PATH
+            FROM MESSENGER_USER mu2
+            JOIN USERS u ON mu2.USER_ID = u.USER_ID
+            LEFT JOIN DEPARTMENT d ON u.DEPT_ID = d.DEPT_ID
+            LEFT JOIN JOB_GRADE j ON u.JBGD_CD = j.JBGD_CD
+            LEFT JOIN FILE_DETAIL fd ON u.USER_IMG_FILE_ID = fd.FILE_ID AND COALESCE(fd.DEL_YN, 'N') = 'N'
+            WHERE mu2.MSGR_ID = r.MSGR_ID
+              AND mu2.USER_ID &lt;&gt; #{userId}
+              AND mu2.LEFT_DT IS NULL
+            ORDER BY mu2.JOIN_DT
+            LIMIT 1
+        ) partner ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT
+                STRING_AGG(u.USER_NM, ', ' ORDER BY u.USER_NM) AS MEMBER_NAMES,
+                COUNT(*) AS MEMBER_COUNT
+            FROM MESSENGER_USER mu3
+            JOIN USERS u ON mu3.USER_ID = u.USER_ID
+            WHERE mu3.MSGR_ID = r.MSGR_ID
+              AND mu3.LEFT_DT IS NULL
+        ) member_names ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT
+                CASE
+                    WHEN COALESCE(c.MSG_TYPE_CD, 'text') = 'file' THEN '[파일] ' || COALESCE(c.CONTENTS, '첨부 파일')
+                    WHEN COALESCE(c.MSG_TYPE_CD, 'text') = 'system' THEN c.CONTENTS
+                    ELSE c.CONTENTS
+                END AS LAST_MSG_CONT,
+                c.SEND_DT
+            FROM MESSENGER_CONTENT c
+            WHERE c.MSGR_ID = r.MSGR_ID
+              AND COALESCE(c.DEL_YN, 'N') = 'N'
+            ORDER BY c.SEND_DT DESC
+            LIMIT 1
+        ) last_msg ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS UNREAD_COUNT
+            FROM MESSENGER_CONTENT c
+            LEFT JOIN MESSENGER_READ mr
+                ON mr.MSG_CONT_ID = c.MSG_CONT_ID
+               AND mr.USER_ID = #{userId}
+            WHERE c.MSGR_ID = r.MSGR_ID
+              AND c.USER_ID &lt;&gt; #{userId}
+              AND COALESCE(c.DEL_YN, 'N') = 'N'
+              AND mr.MSG_CONT_ID IS NULL
+        ) unread_info ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT mu4.USER_ID AS OWNER_USER_ID
+            FROM MESSENGER_USER mu4
+            WHERE mu4.MSGR_ID = r.MSGR_ID
+              AND mu4.LEFT_DT IS NULL
+              AND mu4.ROLE_CD = 'owner'
+            ORDER BY mu4.JOIN_DT
+            LIMIT 1
+        ) owner_info ON TRUE
+        LEFT JOIN MESSENGER_CONTENT pinned_msg
+            ON pinned_msg.MSG_CONT_ID = r.PINNED_MSG_CONT_ID
+           AND COALESCE(pinned_msg.DEL_YN, 'N') = 'N'
+    </sql>
+
+    <update id="updateMessengerRoomName">
+        UPDATE MESSENGER_ROOM
+        SET MSGR_NM = #{msgrNm}
+        WHERE MSGR_ID = #{msgrId}
+    </update>
+
+    <update id="updatePinnedMessage">
+        UPDATE MESSENGER_ROOM
+        SET PINNED_MSG_CONT_ID = #{msgContId},
+            PINNED_BY = #{userId},
+            PINNED_DT = CURRENT_TIMESTAMP
+        WHERE MSGR_ID = #{msgrId}
+    </update>
+
+    <update id="clearPinnedMessage">
+        UPDATE MESSENGER_ROOM
+        SET PINNED_MSG_CONT_ID = NULL,
+            PINNED_BY = NULL,
+            PINNED_DT = NULL
+        WHERE MSGR_ID = #{msgrId}
+    </update>
+
+    <select id="selectMyRooms" resultType="kr.or.ddit.vo.MessengerRoomVO">
+        SELECT
+            <include refid="roomSelectColumns" />
+        FROM MESSENGER_ROOM r
+        <include refid="roomSelectJoins" />
+        WHERE COALESCE(r.DEL_YN, 'N') = 'N'
+        ORDER BY COALESCE(last_msg.SEND_DT, r.CRT_DT) DESC, r.CRT_DT DESC
+    </select>
+
+    <select id="selectMyRoom" resultType="kr.or.ddit.vo.MessengerRoomVO">
+        SELECT
+            <include refid="roomSelectColumns" />
+        FROM MESSENGER_ROOM r
+        <include refid="roomSelectJoins" />
+        WHERE COALESCE(r.DEL_YN, 'N') = 'N'
+          AND r.MSGR_ID = #{msgrId}
+    </select>
+
+    <select id="findPrivateRoom" resultType="kr.or.ddit.vo.MessengerRoomVO">
+        SELECT r.MSGR_ID, r.MSGR_NM, r.CRT_DT, r.DEL_YN, COALESCE(r.ROOM_TYPE_CD, 'group') AS ROOM_TYPE_CD
+        FROM MESSENGER_ROOM r
+        WHERE COALESCE(r.DEL_YN, 'N') = 'N'
+          AND COALESCE(r.ROOM_TYPE_CD, 'group') = 'private'
+          AND EXISTS (
+              SELECT 1
+              FROM MESSENGER_USER mu1
+              WHERE mu1.MSGR_ID = r.MSGR_ID
+                AND mu1.USER_ID = #{userId1}
+                AND mu1.LEFT_DT IS NULL
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM MESSENGER_USER mu2
+              WHERE mu2.MSGR_ID = r.MSGR_ID
+                AND mu2.USER_ID = #{userId2}
+                AND mu2.LEFT_DT IS NULL
+          )
+          AND 2 = (
+              SELECT COUNT(*)
+              FROM MESSENGER_USER mu3
+              WHERE mu3.MSGR_ID = r.MSGR_ID
+                AND mu3.LEFT_DT IS NULL
+          )
+        ORDER BY r.CRT_DT DESC
+        LIMIT 1
+    </select>
+
+    <select id="findSelfRoom" resultType="kr.or.ddit.vo.MessengerRoomVO">
+        SELECT r.MSGR_ID, r.MSGR_NM, r.CRT_DT, r.DEL_YN, COALESCE(r.ROOM_TYPE_CD, 'group') AS ROOM_TYPE_CD
+        FROM MESSENGER_ROOM r
+        WHERE COALESCE(r.DEL_YN, 'N') = 'N'
+          AND COALESCE(r.ROOM_TYPE_CD, 'group') = 'self'
+          AND EXISTS (
+              SELECT 1
+              FROM MESSENGER_USER mu
+              WHERE mu.MSGR_ID = r.MSGR_ID
+                AND mu.USER_ID = #{userId}
+                AND mu.LEFT_DT IS NULL
+          )
+        ORDER BY r.CRT_DT DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertMessengerRoom" parameterType="kr.or.ddit.vo.MessengerRoomVO">
+        <selectKey keyProperty="msgrId" resultType="String" order="BEFORE">
+            SELECT 'MSGR' || LPAD(nextval('MSGR_ID_SEQ')::text, 8, '0')
+        </selectKey>
+        INSERT INTO MESSENGER_ROOM (
+            MSGR_ID,
+            MSGR_NM,
+            CRT_DT,
+            DEL_YN,
+            ROOM_TYPE_CD
+        ) VALUES (
+            #{msgrId},
+            #{msgrNm},
+            CURRENT_TIMESTAMP,
+            'N',
+            COALESCE(#{roomTypeCd}, 'group')
+        )
+    </insert>
+
+    <select id="selectMessengerRoomList" resultType="kr.or.ddit.vo.MessengerRoomVO">
+        SELECT MSGR_ID, MSGR_NM, CRT_DT, DEL_YN, COALESCE(ROOM_TYPE_CD, 'group') AS ROOM_TYPE_CD
+        FROM MESSENGER_ROOM
+        WHERE COALESCE(DEL_YN, 'N') = 'N'
+    </select>
+
+    <select id="selectMessengerRoom" resultType="kr.or.ddit.vo.MessengerRoomVO">
+        SELECT MSGR_ID, MSGR_NM, CRT_DT, DEL_YN, COALESCE(ROOM_TYPE_CD, 'group') AS ROOM_TYPE_CD,
+               PINNED_MSG_CONT_ID, PINNED_BY, PINNED_DT
+        FROM MESSENGER_ROOM
+        WHERE MSGR_ID = #{msgrId}
+    </select>
+
+    <delete id="deleteMessengerRoom">
+        DELETE FROM MESSENGER_ROOM
+        WHERE MSGR_ID = #{msgrId}
+    </delete>
+</mapper>
